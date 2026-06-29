@@ -1,0 +1,201 @@
+# ==========================================
+# Computer Vision & Machine Learning Specific
+# ==========================================
+# Large datasets, raw images, and annotations
+data/
+datasets/
+images/
+videos/
+*._dataset/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Exceptions: Allow images in assets/ or docs/ if they are documentation/UI assets
+!/assets/**/*.png
+!/assets/**/*.jpg
+!/assets/**/*.jpeg
+!/docs/**/*.png
+!/docs/**/*.jpg
+!/docs/**/*.jpeg
+
+# Deep Learning Models, Weights, and Checkpoints
+*.pt
+*.pth
+*.weights
+*.pb
+*.onnx
+*.tflite
+*.h5
+*.ckpt
+*.joblib
+*.pkl
+*.pickle
+checkpoint
+checkpoints/
+weights/
+models/
+saved_models/
+
+# Training Logs, Metrics, and Visualizations
+runs/
+logs/
+tb_logs/
+wandb/
+lightning_logs/
+.tensorboard/
+tensorboard/
+mlruns/
+outputs/
+results/
+predictions/
+
+# ==========================================
+# Python Standard Ignores
+# ==========================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pdm
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582 project packages
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Ruff
+.ruff_cache/
+
+# ==========================================
+# IDEs and System files
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
+Thumbs.db
