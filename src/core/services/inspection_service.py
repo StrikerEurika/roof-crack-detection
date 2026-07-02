@@ -5,6 +5,9 @@ from PIL import Image
 from dataclasses import dataclass, field
 
 
+from .base_service import BaseService
+
+
 @dataclass
 class ProcessedResult:
     vis_output_path: str = ""
@@ -17,49 +20,15 @@ class ProcessedResult:
     severity_data: list = field(default_factory=list)
 
 
-class InspectionService:
-    def __init__(self, history_manager):
-        self.hm = history_manager
-
-    def build_pipeline_config(self, model_variant, device, confidence_threshold,
-                              patch_size, overlap_ratio, use_tta, use_clahe,
-                              config_overrides=None) -> dict:
-        config = {
-            "model_variant": model_variant,
-            "device": device,
-            "confidence_threshold": confidence_threshold,
-            "patch_size": patch_size,
-            "overlap_ratio": overlap_ratio,
-            "use_tta": use_tta,
-            "use_clahe": use_clahe,
-            "clahe_clip_limit": 2.0,
-            "overlay_alpha": self.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.hm.config.get("box_thickness", 2),
-            "contour_color": self.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.hm.config.get("contour_thickness", 2),
-        }
-        if config_overrides:
-            config.update(config_overrides)
-        return config
-
+class InspectionService(BaseService):
     def save_and_record_results(self, results: dict, image_path: str, model_used: str) -> ProcessedResult:
         image_name = os.path.basename(image_path)
         base_name, _ = os.path.splitext(image_name)
-        timestamp_slug = int(time.time())
 
-        vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-        mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-
-        vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-        mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-
-        try:
-            Image.fromarray(results["visualization"]).save(vis_output_path)
-            Image.fromarray(results["binary_mask"]).save(mask_output_path)
-        except Exception as e:
-            print(f"Warning: Failed to save result assets: {e}")
+        # Call base service method to save visualizations
+        vis_output_path, mask_output_path = self.save_image_assets(
+            base_name, results["visualization"], results["binary_mask"]
+        )
 
         crack_count = len(results["bounding_boxes"])
         crack_detected = crack_count > 0

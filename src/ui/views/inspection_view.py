@@ -16,8 +16,8 @@ from qfluentwidgets import (
 
 from src.ui.components import ImageViewer
 from src.workers import InferenceWorker
-from src.reports import PDFReportGenerator
-from src.services import InspectionService
+from src.core.reports import PDFReportGenerator
+from src.core import InspectionService
 from src import check_gpu_available
 
 class InspectionView(QWidget):
@@ -363,11 +363,18 @@ class InspectionView(QWidget):
         self.btn_run.setEnabled(True)
         self.btn_select_file.setEnabled(True)
         self.progress_bar.setVisible(False)
+        
         self._update_output_tabs(results)
-        vis_path, mask_path = self._save_outputs(results)
-        crack_count, crack_detected, max_conf = self._update_history_db(results, vis_path, mask_path)
-        self._populate_table_from_results(results)
-        self._update_summary_label(results, crack_count, crack_detected)
+        
+        # Use InspectionService to save outputs and add history record
+        processed = self.inspection_service.save_and_record_results(
+            results, self.current_image_path, results["model_used"]
+        )
+        self.latest_record = processed.record
+        
+        self._populate_table_from_processed(processed)
+        self._update_summary_label(results, processed.crack_count, processed.crack_detected)
+        
         self.btn_export_pdf.setEnabled(True)
         self.inspection_completed.emit()
         self.tab_widget.setCurrentIndex(0) # show overlay visualization
@@ -377,64 +384,32 @@ class InspectionView(QWidget):
         self.viewer_vis.set_ndarray_image(results["visualization"])
         self.viewer_overlay.set_ndarray_image(results["overlay"])
         self.viewer_mask.set_ndarray_image(results["binary_mask"])
-        conf_map = (results["confidence_map"] * 255).astype("uint8")
-        conf_rgb = np.stack([conf_map, conf_map, conf_map], axis=-1)
+        conf_rgb = self.inspection_service.prepare_confidence_display(results["confidence_map"])
         self.viewer_conf.set_ndarray_image(conf_rgb)
 
-    def _save_outputs(self, results):
-        image_name = os.path.basename(self.current_image_path)
-        base_name, _ = os.path.splitext(image_name)
-        timestamp_slug = int(time.time())
-        vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-        mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-        vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-        mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-        try:
-            Image.fromarray(results["visualization"]).save(vis_output_path)
-            Image.fromarray(results["binary_mask"]).save(mask_output_path)
-        except Exception as e:
-            self.txt_status.append(f"Warning: Failed to save result assets: {e}")
-        return vis_output_path, mask_output_path
-
-    def _update_history_db(self, results, vis_path, mask_path):
-        crack_count = len(results["bounding_boxes"])
-        crack_detected = crack_count > 0
-        max_conf = float(results["confidence_map"].max()) if results["confidence_map"].size > 0 else 0.0
-        self.latest_record = self.hm.add_record(
-            image_path=self.current_image_path,
-            crack_detected=crack_detected,
-            confidence=max_conf,
-            crack_count=crack_count,
-            model_used=results["model_used"],
-            vis_image_path=vis_path,
-            mask_image_path=mask_path,
-            elapsed_time=results["elapsed_time"]
-        )
-        return crack_count, crack_detected, max_conf
-
-    def _populate_table_from_results(self, results):
+    def _populate_table_from_processed(self, processed):
         self.table_cracks.setRowCount(0)
-        bounding_boxes = results["bounding_boxes"]
-        self.table_cracks.setRowCount(len(bounding_boxes))
-        for idx, box in enumerate(bounding_boxes):
+        severity_data = processed.severity_data
+        self.table_cracks.setRowCount(len(severity_data))
+        for idx, item in enumerate(severity_data):
             idx_item = QTableWidgetItem(str(idx + 1))
             idx_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 0, idx_item)
+            
+            box = item["box"]
             coords = f"[{box[0]}, {box[1]}, {box[2]}, {box[3]}]"
             coords_item = QTableWidgetItem(coords)
             coords_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 1, coords_item)
-            w = box[2] - box[0]
-            h = box[3] - box[1]
-            area = w * h
-            severity = "Minor"
+            
+            area = item["area"]
+            severity = item["severity"]
             sev_color = self.COLOR_MINOR
-            if area > self.CRITICAL_AREA:
-                severity = "Critical"
+            if severity == "Critical":
                 sev_color = self.COLOR_CRITICAL
-            elif area > self.MEDIUM_AREA:
-                severity = "Medium"
+            elif severity == "Medium":
                 sev_color = self.COLOR_MEDIUM
+                
             sev_item = QTableWidgetItem(f"{area}px ({severity})")
             sev_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             sev_item.setForeground(QColor(sev_color))

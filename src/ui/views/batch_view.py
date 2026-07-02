@@ -1,8 +1,6 @@
 import os
-import time
-from PIL import Image
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem, QLabel
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, Signal, Slot
@@ -14,6 +12,7 @@ from qfluentwidgets import (
 )
 
 from src.workers import BatchWorker
+from src.core import BatchService
 from src import check_gpu_available
 
 class BatchView(QWidget):
@@ -25,6 +24,8 @@ class BatchView(QWidget):
         super().__init__(parent)
         self.hm = history_manager
         self.model_cache = model_cache
+        self.batch_service = BatchService(history_manager)
+
         self.active_worker = None
         self.input_dir = None
         self.output_dir = None
@@ -219,22 +220,15 @@ class BatchView(QWidget):
         if not self.input_dir or not self.output_dir:
             return
 
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.hm.config.get("patch_size", 512)),
-            "overlap_ratio": float(self.hm.config.get("overlap_ratio", 0.2)),
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "clahe_clip_limit": 2.0,
-            "overlay_alpha": self.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.hm.config.get("box_thickness", 2),
-            "contour_color": self.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.hm.config.get("contour_thickness", 2)
-        }
+        pipeline_config = self.batch_service.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            patch_size=int(self.hm.config.get("patch_size", 512)),
+            overlap_ratio=float(self.hm.config.get("overlap_ratio", 0.2)),
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
 
         # Clear UI components
         self.table_queue.setRowCount(0)
@@ -323,41 +317,13 @@ class BatchView(QWidget):
         status_item.setForeground(QColor("#10b981"))
         self.table_queue.setItem(row_idx, 5, status_item)
 
-        # Save result assets to history
-        results_obj = result.get("results_object")
-        if results_obj:
-            base_name, _ = os.path.splitext(filename)
-            timestamp_slug = int(time.time())
-            
-            vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-            mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-            
-            vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-            mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-            
-            try:
-                Image.fromarray(results_obj["visualization"]).save(vis_output_path)
-                Image.fromarray(results_obj["binary_mask"]).save(mask_output_path)
-                
-                # Save also to user configured batch output directory
-                user_vis_path = os.path.join(self.output_dir, f"{base_name}_overlay.png")
-                user_mask_path = os.path.join(self.output_dir, f"{base_name}_mask.png")
-                Image.fromarray(results_obj["visualization"]).save(user_vis_path)
-                Image.fromarray(results_obj["binary_mask"]).save(user_mask_path)
-                
-                # Add historical entry
-                self.hm.add_record(
-                    image_path=result["image_path"],
-                    crack_detected=crack_detected,
-                    confidence=max_conf,
-                    crack_count=crack_count,
-                    model_used=self.combo_model.currentText(),
-                    vis_image_path=vis_output_path,
-                    mask_image_path=mask_output_path,
-                    elapsed_time=result["elapsed_time"]
-                )
-            except Exception as e:
-                self.txt_log.append(f"Warning: Failed to save result copies: {e}")
+        # Save result assets to history using BatchService
+        try:
+            self.batch_service.save_and_record_file_result(
+                result, self.output_dir, self.combo_model.currentText()
+            )
+        except Exception as e:
+            self.txt_log.append(f"Warning: Failed to save result copies: {e}")
 
         # Scroll to bottom of table
         self.table_queue.scrollToBottom()

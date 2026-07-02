@@ -3,10 +3,10 @@ import time
 from PIL import Image
 
 
-class BatchService:
-    def __init__(self, history_manager):
-        self.hm = history_manager
+from .base_service import BaseService
 
+
+class BatchService(BaseService):
     def save_and_record_file_result(self, result: dict, output_dir: str, model_used: str) -> dict:
         filename = result["filename"]
         crack_detected = result["crack_detected"]
@@ -16,17 +16,12 @@ class BatchService:
         results_obj = result.get("results_object")
         if results_obj:
             base_name, _ = os.path.splitext(filename)
-            timestamp_slug = int(time.time())
-
-            vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-            mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-
-            vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-            mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
 
             try:
-                Image.fromarray(results_obj["visualization"]).save(vis_output_path)
-                Image.fromarray(results_obj["binary_mask"]).save(mask_output_path)
+                # Call base service method to save visualizations to history results folder
+                vis_output_path, mask_output_path = self.save_image_assets(
+                    base_name, results_obj["visualization"], results_obj["binary_mask"]
+                )
 
                 user_vis_path = os.path.join(output_dir, f"{base_name}_overlay.png")
                 user_mask_path = os.path.join(output_dir, f"{base_name}_mask.png")

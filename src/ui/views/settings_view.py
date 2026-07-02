@@ -7,6 +7,8 @@ from qfluentwidgets import (
     ComboBox, Slider, PushButton, PrimaryPushButton, MessageBox, FluentIcon as FIF
 )
 
+from src.core import SettingsService
+
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility."""
     
@@ -15,6 +17,8 @@ class SettingsView(QWidget):
     def __init__(self, history_manager, parent=None):
         super().__init__(parent)
         self.hm = history_manager
+        self.settings_service = SettingsService(history_manager)
+
 
         # Main Layout
         self.main_layout = QVBoxLayout(self)
@@ -209,24 +213,6 @@ class SettingsView(QWidget):
                 err_dialog.hideCancelButton()
                 err_dialog.exec()
 
-    def color_to_rgb(self, name: str) -> list:
-        mapping = {
-            "Red": [255, 0, 0],
-            "Green": [0, 255, 0],
-            "Blue": [0, 0, 255],
-            "Yellow": [255, 255, 0]
-        }
-        return mapping.get(name, [255, 0, 0])
-
-    def rgb_to_color_name(self, rgb: list) -> str:
-        mapping = {
-            (255, 0, 0): "Red",
-            (0, 255, 0): "Green",
-            (0, 0, 255): "Blue",
-            (255, 255, 0): "Yellow"
-        }
-        return mapping.get(tuple(rgb), "Red")
-
     def load_settings(self):
         config = self.hm.config
         
@@ -249,9 +235,9 @@ class SettingsView(QWidget):
         box_color = config.get("box_color", [0, 255, 0])
         contour_color = config.get("contour_color", [0, 0, 255])
         
-        self.combo_color_overlay.setCurrentText(self.rgb_to_color_name(overlay_color))
-        self.combo_color_box.setCurrentText(self.rgb_to_color_name(box_color))
-        self.combo_color_contour.setCurrentText(self.rgb_to_color_name(contour_color))
+        self.combo_color_overlay.setCurrentText(self.settings_service.rgb_to_color_name(overlay_color))
+        self.combo_color_box.setCurrentText(self.settings_service.rgb_to_color_name(box_color))
+        self.combo_color_contour.setCurrentText(self.settings_service.rgb_to_color_name(contour_color))
 
         # Reports directory
         reports_dir = config.get("default_reports_dir", self.hm.reports_dir)
@@ -259,16 +245,16 @@ class SettingsView(QWidget):
         self.lbl_reports_dir.setToolTip(reports_dir)
 
     def save_settings(self):
-        new_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "overlay_alpha": self.slider_alpha.value() / 100.0,
-            "overlay_color": self.color_to_rgb(self.combo_color_overlay.currentText()),
-            "box_color": self.color_to_rgb(self.combo_color_box.currentText()),
-            "contour_color": self.color_to_rgb(self.combo_color_contour.currentText()),
-            "default_reports_dir": self.lbl_reports_dir.toolTip()
-        }
+        new_config = self.settings_service.build_config_from_state(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            overlay_alpha=self.slider_alpha.value() / 100.0,
+            overlay_color_name=self.combo_color_overlay.currentText(),
+            box_color_name=self.combo_color_box.currentText(),
+            contour_color_name=self.combo_color_contour.currentText(),
+            reports_dir=self.lbl_reports_dir.toolTip()
+        )
         
         success = self.hm.save_config(new_config)
         if success:

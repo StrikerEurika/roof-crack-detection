@@ -204,3 +204,4 @@ config.json
 history.json
 
 docs/
+!src/core/models
