@@ -23,6 +23,19 @@ from src import check_gpu_available
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results."""
     
+    # Model options for config
+    MODEL_VARIANTS = [
+        "Seg_UNET_CFD_actual_v2",
+        "Seg_UNET_CFD_actual_v1",
+        "Det_YOLOv26n-seg_crack-dataset_v1"
+    ]
+    PATCH_SIZES = ["256", "512", "1024"]
+    CRITICAL_AREA = 1000
+    MEDIUM_AREA = 200
+    COLOR_CRITICAL = "#f43f5e"
+    COLOR_MEDIUM = "#f59e0b"
+    COLOR_MINOR = "#10b981"
+
     inspection_completed = Signal() # Emitted when a new inspection is saved to history
 
     def __init__(self, history_manager, model_cache, parent=None):
@@ -350,89 +363,84 @@ class InspectionView(QWidget):
         self.btn_run.setEnabled(True)
         self.btn_select_file.setEnabled(True)
         self.progress_bar.setVisible(False)
-        
-        # Display images in other tabs
+        self._update_output_tabs(results)
+        vis_path, mask_path = self._save_outputs(results)
+        crack_count, crack_detected, max_conf = self._update_history_db(results, vis_path, mask_path)
+        self._populate_table_from_results(results)
+        self._update_summary_label(results, crack_count, crack_detected)
+        self.btn_export_pdf.setEnabled(True)
+        self.inspection_completed.emit()
+        self.tab_widget.setCurrentIndex(0) # show overlay visualization
+
+    def _update_output_tabs(self, results):
         self.viewer_orig.set_ndarray_image(results["original_image"])
         self.viewer_vis.set_ndarray_image(results["visualization"])
         self.viewer_overlay.set_ndarray_image(results["overlay"])
         self.viewer_mask.set_ndarray_image(results["binary_mask"])
-        
-        # Confidence map is grayscale [0.0 - 1.0]. Convert to grayscale display
         conf_map = (results["confidence_map"] * 255).astype("uint8")
         conf_rgb = np.stack([conf_map, conf_map, conf_map], axis=-1)
         self.viewer_conf.set_ndarray_image(conf_rgb)
-        
-        # Save output images to assets/results folder
+
+    def _save_outputs(self, results):
         image_name = os.path.basename(self.current_image_path)
         base_name, _ = os.path.splitext(image_name)
         timestamp_slug = int(time.time())
-        
         vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
         mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-        
         vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
         mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-        
         try:
             Image.fromarray(results["visualization"]).save(vis_output_path)
             Image.fromarray(results["binary_mask"]).save(mask_output_path)
         except Exception as e:
             self.txt_status.append(f"Warning: Failed to save result assets: {e}")
+        return vis_output_path, mask_output_path
 
-        # Update History database
+    def _update_history_db(self, results, vis_path, mask_path):
         crack_count = len(results["bounding_boxes"])
         crack_detected = crack_count > 0
         max_conf = float(results["confidence_map"].max()) if results["confidence_map"].size > 0 else 0.0
-        
         self.latest_record = self.hm.add_record(
             image_path=self.current_image_path,
             crack_detected=crack_detected,
             confidence=max_conf,
             crack_count=crack_count,
             model_used=results["model_used"],
-            vis_image_path=vis_output_path,
-            mask_image_path=mask_output_path,
+            vis_image_path=vis_path,
+            mask_image_path=mask_path,
             elapsed_time=results["elapsed_time"]
         )
-        
-        # Populate table of cracks
+        return crack_count, crack_detected, max_conf
+
+    def _populate_table_from_results(self, results):
         self.table_cracks.setRowCount(0)
-        self.table_cracks.setRowCount(len(results["bounding_boxes"]))
-        
-        for idx, box in enumerate(results["bounding_boxes"]):
-            # Index
+        bounding_boxes = results["bounding_boxes"]
+        self.table_cracks.setRowCount(len(bounding_boxes))
+        for idx, box in enumerate(bounding_boxes):
             idx_item = QTableWidgetItem(str(idx + 1))
             idx_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 0, idx_item)
-            
-            # Bounding box coords
             coords = f"[{box[0]}, {box[1]}, {box[2]}, {box[3]}]"
             coords_item = QTableWidgetItem(coords)
             coords_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 1, coords_item)
-            
-            # Estimated Area/Severity
             w = box[2] - box[0]
             h = box[3] - box[1]
             area = w * h
             severity = "Minor"
-            if area > 1000:
+            sev_color = self.COLOR_MINOR
+            if area > self.CRITICAL_AREA:
                 severity = "Critical"
-            elif area > 200:
+                sev_color = self.COLOR_CRITICAL
+            elif area > self.MEDIUM_AREA:
                 severity = "Medium"
-                
+                sev_color = self.COLOR_MEDIUM
             sev_item = QTableWidgetItem(f"{area}px ({severity})")
             sev_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            # Style severity column
-            if severity == "Critical":
-                sev_item.setForeground(QColor("#f43f5e"))
-            elif severity == "Medium":
-                sev_item.setForeground(QColor("#f59e0b"))
-            else:
-                sev_item.setForeground(QColor("#10b981"))
+            sev_item.setForeground(QColor(sev_color))
             self.table_cracks.setItem(idx, 2, sev_item)
 
-        # Update Summary
+    def _update_summary_label(self, results, crack_count, crack_detected):
         status_msg = "CRITICAL ACTION REQUIRED" if crack_detected else "ROOF SAFE / CLEAR"
         self.lbl_summary.setText(
             f"Run Status: COMPLETED\n"
@@ -440,10 +448,7 @@ class InspectionView(QWidget):
             f"Crack count: {crack_count}\n"
             f"Time elapsed: {results['elapsed_time']:.2f}s"
         )
-        
-        self.btn_export_pdf.setEnabled(True)
-        self.inspection_completed.emit()
-        self.tab_widget.setCurrentIndex(0) # show overlay visualization
+
         
     @Slot(str)
     def on_worker_error(self, err):

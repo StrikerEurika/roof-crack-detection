@@ -6,8 +6,13 @@ from PySide6.QtGui import QColor, QPainter, QFont
 from PySide6.QtCore import Qt
 
 class InspectionChart(QWidget):
-    """Custom chart widget using PySide6.QtCharts to show 7-day inspection trends."""
-    
+    """Custom chart widget. Show 7-day inspection trends."""
+    DAYS = 7
+    COLOR_INSPECTED = "#3b82f6"
+    COLOR_CRACKS = "#f43f5e"
+    CHART_TITLE = "7-Day Inspection Analytics"
+    MIN_TICKS = 5
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
@@ -33,21 +38,49 @@ class InspectionChart(QWidget):
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.layout.addWidget(self.chart_view)
 
-    def update_data(self, history: list):
-        """Processes the last 7 days of data from history and updates the chart."""
+    def update_data(self, history: list) -> None:
         self.chart.removeAllSeries()
-        
-        # Determine last 7 days keys
-        days = []
-        for i in range(6, -1, -1):
-            # Calculate date strings
-            from datetime import timedelta
-            date_str = (datetime.now() - timedelta(days=i)).strftime("%m/%d")
-            days.append(date_str)
-            
+        days = self._get_last_days()
+        inspected_counts, cracked_counts = self._tally_history(history, days)
+        set_inspected = QBarSet("Inspected")
+        set_inspected.setColor(QColor(self.COLOR_INSPECTED))
+        set_cracks = QBarSet("Cracks Detected")
+        set_cracks.setColor(QColor(self.COLOR_CRACKS))
+        for day in days:
+            set_inspected.append(inspected_counts[day])
+            set_cracks.append(cracked_counts[day])
+        series = QBarSeries()
+        series.append(set_inspected)
+        series.append(set_cracks)
+        self.chart.addSeries(series)
+        axis_x = QBarCategoryAxis()
+        axis_x.append(days)
+        axis_x.setLabelsColor(QColor("#000000"))
+        axis_x.setLinePenColor(QColor("#808080"))
+        self.chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        series.attachAxis(axis_x)
+        axis_y = QValueAxis()
+        axis_y.setLabelsColor(QColor("#000000"))
+        axis_y.setLinePenColor(QColor("#808080"))
+        axis_y.setGridLineColor(QColor("#e2e8f0"))
+        max_val = max([inspected_counts[d] for d in days] + [self.MIN_TICKS])
+        axis_y.setRange(0, max_val + 1)
+        axis_y.setLabelFormat("%d")
+        self.chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        series.attachAxis(axis_y)
+
+    @staticmethod
+    def _get_last_days() -> list:
+        from datetime import timedelta
+        return [
+            (datetime.now() - timedelta(days=i)).strftime("%m/%d")
+            for i in range(InspectionChart.DAYS - 1, -1, -1)
+        ]
+
+    @staticmethod
+    def _tally_history(history: list, days: list) -> tuple:
         inspected_counts = defaultdict(int)
         cracked_counts = defaultdict(int)
-        
         for record in history:
             timestamp_str = record.get("timestamp", "")
             if timestamp_str:
@@ -60,40 +93,5 @@ class InspectionChart(QWidget):
                             cracked_counts[date_key] += 1
                 except Exception:
                     pass
-                    
-        # Create bar sets
-        set_inspected = QBarSet("Inspected")
-        set_inspected.setColor(QColor("#3b82f6")) # Blue
-        
-        set_cracks = QBarSet("Cracks Detected")
-        set_cracks.setColor(QColor("#f43f5e")) # Coral Red
-        
-        for day in days:
-            set_inspected.append(inspected_counts[day])
-            set_cracks.append(cracked_counts[day])
-            
-        series = QBarSeries()
-        series.append(set_inspected)
-        series.append(set_cracks)
-        self.chart.addSeries(series)
-        
-        # X-Axis configuration
-        axis_x = QBarCategoryAxis()
-        axis_x.append(days)
-        axis_x.setLabelsColor(QColor("#000000"))
-        axis_x.setLinePenColor(QColor("#808080"))
-        self.chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
-        series.attachAxis(axis_x)
-        
-        # Y-Axis configuration
-        axis_y = QValueAxis()
-        axis_y.setLabelsColor(QColor("#000000"))
-        axis_y.setLinePenColor(QColor("#808080"))
-        axis_y.setGridLineColor(QColor("#e2e8f0"))
-        # Dynamic range
-        max_val = max([inspected_counts[d] for d in days] + [5]) # minimum 5 ticks
-        axis_y.setRange(0, max_val + 1)
-        axis_y.setLabelFormat("%d")
-        
-        self.chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
-        series.attachAxis(axis_y)
+        return inspected_counts, cracked_counts
+
