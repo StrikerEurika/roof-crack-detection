@@ -23,6 +23,7 @@ class InspectionChart(SimpleCardWidget):
         # Make the chart background transparent to let SimpleCardWidget styling shine through
         self.chart.setBackgroundRoundness(8)
         self.chart.setBackgroundBrush(Qt.BrushStyle.NoBrush)
+        self.chart.setBackgroundVisible(False)  # Completely hide default chart background
         self.chart.setMargins(QMargins(8, 8, 8, 8))
         
         # Configure Title
@@ -40,6 +41,8 @@ class InspectionChart(SimpleCardWidget):
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.chart_view.setBackgroundBrush(Qt.BrushStyle.NoBrush)
+        self.chart_view.setStyleSheet("background: transparent; border: none;")
+        self.chart_view.viewport().setStyleSheet("background: transparent;")
         self.layout.addWidget(self.chart_view)
         
         # Apply theme-aware colors initially
@@ -52,16 +55,23 @@ class InspectionChart(SimpleCardWidget):
         """Adapts the chart visual colors depending on Light/Dark theme mode."""
         is_dark = isDarkTheme()
         
+        # Set base Qt Charts theme (Note: this overrides manual background settings)
         if is_dark:
+            self.chart.setTheme(QChart.ChartTheme.ChartThemeDark)
             title_color = "#ffffff"
             label_color = "#d0d0d0"
             grid_color = "#2d2d2d"
             axis_line_color = "#555555"
         else:
+            self.chart.setTheme(QChart.ChartTheme.ChartThemeLight)
             title_color = "#202020"
             label_color = "#555555"
             grid_color = "#e2e8f0"
             axis_line_color = "#cccccc"
+            
+        # Re-apply transparency overrides (since setTheme resets them to default theme backgrounds)
+        self.chart.setBackgroundBrush(Qt.BrushStyle.NoBrush)
+        self.chart.setBackgroundVisible(False)
             
         self.chart.setTitleBrush(QColor(title_color))
         

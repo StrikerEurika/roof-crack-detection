@@ -99,12 +99,14 @@ class InspectionView(QWidget):
         self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
         self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setFixedHeight(32)
         model_layout.addWidget(self.combo_model)
         
         # Device selector
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
+        self.combo_device.setFixedHeight(32)
         
         has_gpu = check_gpu_available()
 
@@ -129,6 +131,7 @@ class InspectionView(QWidget):
         self.combo_patch = ComboBox(self.card_model)
         self.combo_patch.addItems(["256", "512", "1024"])
         self.combo_patch.setCurrentText(str(self.hm.config.get("patch_size", 512)))
+        self.combo_patch.setFixedHeight(32)
         model_layout.addWidget(self.combo_patch)
 
         # Overlap ratio
@@ -474,3 +477,12 @@ class InspectionView(QWidget):
                 self.inspection_completed.emit()
             else:
                 self.txt_status.append("Error: Failed to generate PDF report.")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force a layout and geometry recalculation when switching to inspection view
+        self.layout.update()
+        self.layout.activate()
+        for child in self.findChildren(QWidget):
+            child.updateGeometry()
+            child.update()

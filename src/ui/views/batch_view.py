@@ -90,11 +90,13 @@ class BatchView(QWidget):
         self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
         self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setFixedHeight(32)
         model_layout.addWidget(self.combo_model)
         
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
+        self.combo_device.setFixedHeight(32)
         
         has_gpu = check_gpu_available()
                 
@@ -361,3 +363,12 @@ class BatchView(QWidget):
         self.btn_select_output.setEnabled(True)
         # Update progress bar fully
         self.progress_bar.setValue(self.progress_bar.maximum())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force a layout and geometry recalculation when switching to batch view
+        self.layout.update()
+        self.layout.activate()
+        for child in self.findChildren(QWidget):
+            child.updateGeometry()
+            child.update()
