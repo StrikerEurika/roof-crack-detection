@@ -27,16 +27,22 @@ class BatchView(QWidget):
         # Stylesheet (Consistent with dark theme)
         self.setStyleSheet("""
             QWidget {
-                background-color: #0f172a;
-                color: #f8fafc;
+                background-color: #d4d0c8;
+                color: #000000;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
+                font-size: 11px;
             }
             QGroupBox {
-                border: 1px solid #334155;
-                border-radius: 8px;
+                border: 2px solid;
+                border-top-color: #808080;
+                border-left-color: #808080;
+                border-right-color: #ffffff;
+                border-bottom-color: #ffffff;
                 margin-top: 15px;
                 padding-top: 15px;
                 font-weight: bold;
-                color: #e2e8f0;
+                color: #000000;
+                border-radius: 0px;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -44,70 +50,114 @@ class BatchView(QWidget):
                 padding: 0 3px 0 3px;
             }
             QLabel {
-                font-size: 12px;
-                color: #cbd5e1;
+                font-size: 11px;
+                color: #000000;
             }
             QComboBox, QSlider {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 4px;
-                color: #f8fafc;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                border-radius: 0px;
+                padding: 3px;
+                color: #000000;
             }
             QPushButton.primaryBtn {
-                background-color: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px 12px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 11px;
             }
             QPushButton.primaryBtn:hover {
-                background-color: #2563eb;
+                background-color: #e0ded9;
+            }
+            QPushButton.primaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 9px;
+                padding-left: 13px;
+                padding-bottom: 7px;
+                padding-right: 11px;
             }
             QPushButton.primaryBtn:disabled {
-                background-color: #1e293b;
-                color: #64748b;
-                border: 1px solid #334155;
+                background-color: #d4d0c8;
+                color: #808080;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
             }
             QPushButton.secondaryBtn {
-                background-color: #1e293b;
-                color: #f8fafc;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 8px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 6px 12px;
                 font-weight: bold;
             }
             QPushButton.secondaryBtn:hover {
-                background-color: #334155;
-                border: 1px solid #3b82f6;
+                background-color: #e0ded9;
+            }
+            QPushButton.secondaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 7px;
+                padding-left: 13px;
+                padding-bottom: 5px;
+                padding-right: 11px;
             }
             QProgressBar {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 4px;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                background-color: #ffffff;
                 text-align: center;
-                color: #f8fafc;
+                color: #000000;
                 font-weight: bold;
+                border-radius: 0px;
             }
             QProgressBar::chunk {
-                background-color: #10b981; /* green indicator for progress */
-                border-radius: 3px;
+                background-color: #000080; /* navy indicator for progress */
+                width: 8px;
+                margin: 0.5px;
+                border-radius: 0px;
             }
             QTableWidget {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                gridline-color: #334155;
-                border-radius: 8px;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                gridline-color: #d4d0c8;
+                border-radius: 0px;
+                color: #000000;
             }
             QTableWidget::item {
-                border-bottom: 1px solid #334155;
+                border-bottom: 1px solid #d4d0c8;
             }
             QHeaderView::section {
-                background-color: #0f172a;
-                color: #94a3b8;
-                border: none;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1px solid #ffffff;
+                border-left: 1px solid #ffffff;
+                border-right: 1px solid #808080;
+                border-bottom: 1px solid #808080;
+                padding: 3px;
                 font-weight: bold;
             }
         """)
@@ -142,7 +192,7 @@ class BatchView(QWidget):
 
         self.lbl_input_dir = QLabel("No input directory selected")
         self.lbl_input_dir.setWordWrap(True)
-        self.lbl_input_dir.setStyleSheet("color: #94a3b8; font-style: italic;")
+        self.lbl_input_dir.setStyleSheet("color: #404040; font-style: italic;")
         folders_layout.addWidget(self.lbl_input_dir)
 
         self.btn_select_output = QPushButton("📁 Output Results Folder...")
@@ -153,7 +203,7 @@ class BatchView(QWidget):
 
         self.lbl_output_dir = QLabel("No output directory selected")
         self.lbl_output_dir.setWordWrap(True)
-        self.lbl_output_dir.setStyleSheet("color: #94a3b8; font-style: italic;")
+        self.lbl_output_dir.setStyleSheet("color: #404040; font-style: italic;")
         folders_layout.addWidget(self.lbl_output_dir)
 
         # Group 2: Model Configuration
@@ -207,14 +257,14 @@ class BatchView(QWidget):
         # Action Buttons
         self.btn_start = QPushButton("⚡ START BATCH INSPECTION")
         self.btn_start.setProperty("class", "primaryBtn")
-        self.btn_start.setStyleSheet("background-color: #10b981;") # green
+        self.btn_start.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # green
         self.btn_start.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_start.setEnabled(False)
         self.btn_start.clicked.connect(self.start_batch)
 
         self.btn_cancel = QPushButton("🛑 CANCEL BATCH")
         self.btn_cancel.setProperty("class", "primaryBtn")
-        self.btn_cancel.setStyleSheet("background-color: #f43f5e;") # red
+        self.btn_cancel.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # red
         self.btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_cancel.setEnabled(False)
         self.btn_cancel.clicked.connect(self.cancel_batch)
@@ -235,7 +285,7 @@ class BatchView(QWidget):
 
         # Header Details
         lbl_queue_title = QLabel("Batch Execution Progress")
-        lbl_queue_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #f8fafc;")
+        lbl_queue_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #000000;")
         right_layout.addWidget(lbl_queue_title)
 
         # Progress bar
@@ -266,7 +316,7 @@ class BatchView(QWidget):
         # Log details
         self.txt_log = QTextEdit()
         self.txt_log.setReadOnly(True)
-        self.txt_log.setStyleSheet("background-color: #020617; border: 1px solid #1e293b; color: #94a3b8; font-size: 11px;")
+        self.txt_log.setStyleSheet("background-color: #ffffff; border-top: 2px solid #808080; border-left: 2px solid #808080; border-right: 2px solid #ffffff; border-bottom: 2px solid #ffffff; color: #000000; font-size: 11px;")
         self.txt_log.setPlaceholderText("Logs will be shown here during batch processing.")
         self.txt_log.setMaximumHeight(150)
         right_layout.addWidget(self.txt_log, stretch=1)
@@ -397,10 +447,10 @@ class BatchView(QWidget):
         status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if crack_detected:
             status_widget.setText("⚠️ YES")
-            status_widget.setStyleSheet("color: #f43f5e; font-weight: bold; background: transparent;")
+            status_widget.setStyleSheet("color: #dc2626; font-weight: bold; background: transparent;")
         else:
             status_widget.setText("✅ NONE")
-            status_widget.setStyleSheet("color: #10b981; font-weight: bold; background: transparent;")
+            status_widget.setStyleSheet("color: #16a34a; font-weight: bold; background: transparent;")
         self.table_queue.setCellWidget(row_idx, 2, status_widget)
 
         # Crack count

@@ -25,47 +25,64 @@ class MainWindow(QMainWindow):
         self.resize(1280, 800)
         self.setMinimumSize(1024, 700)
 
-        # Base Application Stylesheet (Dark Minimalist Theme)
+        # Base Application Stylesheet (Win32 Retro Classic Theme)
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #0f172a;
+                background-color: #d4d0c8;
             }
             QWidget#centralWidget {
-                background-color: #0f172a;
+                background-color: #d4d0c8;
             }
             QFrame#sidebarPanel {
-                background-color: #020617;
-                border-right: 1px solid #1e293b;
+                background-color: #d4d0c8;
+                border-right: 2px solid #808080;
             }
             QLabel#sidebarTitle {
-                color: #f8fafc;
-                font-size: 16px;
+                color: #ffffff;
+                background-color: #000080;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial;
+                font-size: 12px;
                 font-weight: bold;
-                letter-spacing: 1px;
-                padding-bottom: 20px;
-                border-bottom: 1px solid #1e293b;
+                padding: 6px;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                margin-bottom: 15px;
             }
             QPushButton.navBtn {
-                background-color: transparent;
-                color: #94a3b8;
-                border: none;
-                border-radius: 6px;
-                padding: 12px 15px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px 12px;
                 text-align: left;
-                font-size: 13px;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial;
+                font-size: 11px;
                 font-weight: bold;
             }
             QPushButton.navBtn:hover {
-                background-color: #1e293b;
-                color: #f8fafc;
+                background-color: #e0ded9;
             }
             QPushButton.navBtn:checked {
-                background-color: #3b82f6;
-                color: white;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 9px;
+                padding-left: 13px;
+                padding-bottom: 7px;
+                padding-right: 11px;
             }
             QLabel#sidebarFooter {
-                color: #475569;
-                font-size: 11px;
+                color: #404040;
+                font-family: 'Tahoma', Arial;
+                font-size: 10px;
                 font-weight: bold;
             }
         """)

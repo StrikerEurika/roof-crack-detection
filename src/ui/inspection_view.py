@@ -30,16 +30,22 @@ class InspectionView(QWidget):
         # Style Sheets
         self.setStyleSheet("""
             QWidget {
-                background-color: #0f172a;
-                color: #f8fafc;
+                background-color: #d4d0c8;
+                color: #000000;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
+                font-size: 11px;
             }
             QGroupBox {
-                border: 1px solid #334155;
-                border-radius: 8px;
+                border: 2px solid;
+                border-top-color: #808080;
+                border-left-color: #808080;
+                border-right-color: #ffffff;
+                border-bottom-color: #ffffff;
                 margin-top: 15px;
                 padding-top: 15px;
                 font-weight: bold;
-                color: #e2e8f0;
+                color: #000000;
+                border-radius: 0px;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -47,90 +53,140 @@ class InspectionView(QWidget):
                 padding: 0 3px 0 3px;
             }
             QLabel {
-                font-size: 12px;
-                color: #cbd5e1;
+                font-size: 11px;
+                color: #000000;
             }
             QComboBox, QSlider {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 4px;
-                color: #f8fafc;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                border-radius: 0px;
+                padding: 3px;
+                color: #000000;
             }
             QPushButton.primaryBtn {
-                background-color: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px 12px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 11px;
             }
             QPushButton.primaryBtn:hover {
-                background-color: #2563eb;
+                background-color: #e0ded9;
+            }
+            QPushButton.primaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 9px;
+                padding-left: 13px;
+                padding-bottom: 7px;
+                padding-right: 11px;
             }
             QPushButton.primaryBtn:disabled {
-                background-color: #1e293b;
-                color: #64748b;
-                border: 1px solid #334155;
+                background-color: #d4d0c8;
+                color: #808080;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
             }
             QPushButton.secondaryBtn {
-                background-color: #1e293b;
-                color: #f8fafc;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 8px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 6px 12px;
                 font-weight: bold;
             }
             QPushButton.secondaryBtn:hover {
-                background-color: #334155;
-                border: 1px solid #3b82f6;
+                background-color: #e0ded9;
+            }
+            QPushButton.secondaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 7px;
+                padding-left: 13px;
+                padding-bottom: 5px;
+                padding-right: 11px;
             }
             QTabWidget::panel {
-                border: 1px solid #334155;
-                background-color: #1e293b;
-                border-radius: 8px;
+                border-top: 2px solid #ffffff;
+                border-left: 2px solid #ffffff;
+                border-right: 2px solid #808080;
+                border-bottom: 2px solid #808080;
+                background-color: #d4d0c8;
+                border-radius: 0px;
             }
             QTabBar::tab {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+                background-color: #d4d0c8;
+                border-top: 2px solid #ffffff;
+                border-left: 2px solid #ffffff;
+                border-right: 2px solid #808080;
                 border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 8px 16px;
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+                padding: 5px 10px;
                 margin-right: 2px;
-                color: #94a3b8;
+                color: #000000;
                 font-weight: bold;
             }
-            QTabBar::tab:selected, QTabBar::tab:hover {
-                background-color: #1e293b;
-                color: #f8fafc;
-                border-bottom: 2px solid #3b82f6;
+            QTabBar::tab:selected {
+                background-color: #d4d0c8;
+                margin-top: -2px;
+                border-bottom: none;
             }
             QProgressBar {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 4px;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                background-color: #ffffff;
                 text-align: center;
-                color: #f8fafc;
+                color: #000000;
                 font-weight: bold;
+                border-radius: 0px;
             }
             QProgressBar::chunk {
-                background-color: #3b82f6;
-                border-radius: 3px;
+                background-color: #000080;
+                width: 8px;
+                margin: 0.5px;
+                border-radius: 0px;
             }
             QTableWidget {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                gridline-color: #334155;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                gridline-color: #d4d0c8;
+                color: #000000;
+                border-radius: 0px;
             }
             QTableWidget::item {
-                border-bottom: 1px solid #334155;
+                border-bottom: 1px solid #d4d0c8;
             }
             QHeaderView::section {
-                background-color: #0f172a;
-                color: #94a3b8;
-                border: none;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1px solid #ffffff;
+                border-left: 1px solid #ffffff;
+                border-right: 1px solid #808080;
+                border-bottom: 1px solid #808080;
+                padding: 3px;
                 font-weight: bold;
             }
         """)
@@ -165,7 +221,7 @@ class InspectionView(QWidget):
 
         self.lbl_filename = QLabel("No image file loaded")
         self.lbl_filename.setWordWrap(True)
-        self.lbl_filename.setStyleSheet("color: #94a3b8; font-style: italic;")
+        self.lbl_filename.setStyleSheet("color: #404040; font-style: italic;")
         source_layout.addWidget(self.lbl_filename)
         
         # Group 2: Model Configuration
@@ -247,7 +303,7 @@ class InspectionView(QWidget):
         self.txt_status = QTextEdit()
         self.txt_status.setReadOnly(True)
         self.txt_status.setMaximumHeight(80)
-        self.txt_status.setStyleSheet("background-color: #020617; border: 1px solid #1e293b; color: #94a3b8; font-size: 11px;")
+        self.txt_status.setStyleSheet("background-color: #ffffff; border-top: 2px solid #808080; border-left: 2px solid #808080; border-right: 2px solid #ffffff; border-bottom: 2px solid #ffffff; color: #000000; font-size: 11px;")
         self.txt_status.setText("Load a roof image file to begin analysis.")
 
         # Progress bar
@@ -302,7 +358,7 @@ class InspectionView(QWidget):
         # Results table
         table_container = QVBoxLayout()
         lbl_results_title = QLabel("Detected Crack Components")
-        lbl_results_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f8fafc;")
+        lbl_results_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #000000;")
         table_container.addWidget(lbl_results_title)
         
         self.table_cracks = QTableWidget()
@@ -330,7 +386,7 @@ class InspectionView(QWidget):
 
         self.btn_export_pdf = QPushButton("📄 Export PDF Inspection Report")
         self.btn_export_pdf.setProperty("class", "primaryBtn")
-        self.btn_export_pdf.setStyleSheet("background-color: #10b981;") # Green accent
+        self.btn_export_pdf.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # Green accent
         self.btn_export_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_export_pdf.setEnabled(False)
         self.btn_export_pdf.clicked.connect(self.export_report)
@@ -338,7 +394,7 @@ class InspectionView(QWidget):
 
         self.lbl_summary = QLabel("Run Status: No current inspection.")
         self.lbl_summary.setWordWrap(True)
-        self.lbl_summary.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        self.lbl_summary.setStyleSheet("color: #000000; font-size: 11px;")
         actions_container.addWidget(self.lbl_summary)
         
         results_layout.addLayout(actions_container, stretch=1)

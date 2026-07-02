@@ -24,93 +24,138 @@ class HomeView(QWidget):
         # Styles
         self.setStyleSheet("""
             QWidget {
-                background-color: #0f172a;
-                color: #f8fafc;
+                background-color: #d4d0c8;
+                color: #000000;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
+                font-size: 11px;
             }
             QLabel#sectionHeader {
-                font-size: 20px;
+                font-size: 11px;
                 font-weight: bold;
-                color: #f8fafc;
+                color: #000000;
                 margin-top: 15px;
-                margin-bottom: 10px;
+                margin-bottom: 5px;
             }
             QFrame.card {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 8px;
+                background-color: #d4d0c8;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
             }
             QFrame.kpiCard {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 12px;
+                background-color: #d4d0c8;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px;
             }
             QLabel.kpiVal {
-                font-size: 26px;
+                font-size: 18px;
                 font-weight: bold;
-                color: #3b82f6;
+                color: #000080;
             }
             QLabel.kpiLabel {
-                font-size: 11px;
-                color: #94a3b8;
+                font-size: 10px;
+                color: #404040;
                 text-transform: uppercase;
                 font-weight: bold;
             }
             QPushButton.actionCard {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 20px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 12px;
                 text-align: left;
-                font-size: 15px;
+                font-size: 11px;
                 font-weight: bold;
-                color: #f8fafc;
             }
             QPushButton.actionCard:hover {
-                background-color: #334155;
-                border: 1px solid #3b82f6;
+                background-color: #e0ded9;
+            }
+            QPushButton.actionCard:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 13px;
+                padding-left: 13px;
+                padding-bottom: 11px;
+                padding-right: 11px;
             }
             QPushButton.actionCard QLabel {
                 background-color: transparent;
             }
             QTableWidget {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                gridline-color: #334155;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                border-radius: 0px;
+                gridline-color: #d4d0c8;
+                color: #000000;
             }
             QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #334155;
+                padding: 4px;
+                border-bottom: 1px solid #d4d0c8;
             }
             QHeaderView::section {
-                background-color: #0f172a;
-                color: #94a3b8;
-                padding: 6px;
-                border: none;
+                background-color: #d4d0c8;
+                color: #000000;
+                padding: 3px;
+                border-top: 1px solid #ffffff;
+                border-left: 1px solid #ffffff;
+                border-right: 1px solid #808080;
+                border-bottom: 1px solid #808080;
                 font-weight: bold;
-                font-size: 11px;
+                font-size: 10px;
                 text-transform: uppercase;
             }
             QScrollBar:vertical {
-                background-color: #1e293b;
-                width: 12px;
+                background-color: #d4d0c8;
+                width: 16px;
+                border: 1px solid #808080;
             }
             QScrollBar::handle:vertical {
-                background-color: #475569;
+                background-color: #d4d0c8;
                 min-height: 20px;
-                border-radius: 6px;
+                border-top: 1px solid #ffffff;
+                border-left: 1px solid #ffffff;
+                border-right: 1px solid #808080;
+                border-bottom: 1px solid #808080;
+                border-radius: 0px;
             }
             QPushButton.viewBtn {
-                background-color: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 5px 10px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 2px 6px;
                 font-weight: bold;
             }
             QPushButton.viewBtn:hover {
-                background-color: #2563eb;
+                background-color: #e0ded9;
+            }
+            QPushButton.viewBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 3px;
+                padding-left: 7px;
+                padding-bottom: 1px;
+                padding-right: 5px;
             }
         """)
 
@@ -140,10 +185,10 @@ class HomeView(QWidget):
         
         title = QLabel("Dashboard")
         title.setObjectName("dashboardTitle")
-        title.setStyleSheet("font-size: 26px; font-weight: bold; color: #f8fafc;")
+        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #000000; font-family: 'Tahoma';")
         
         subtitle = QLabel("Welcome to the Roof Crack Detection & Structural Safety Hub")
-        subtitle.setStyleSheet("font-size: 13px; color: #94a3b8;")
+        subtitle.setStyleSheet("font-size: 10px; color: #404040; font-family: 'Tahoma';")
         
         header_layout.addWidget(title)
         header_layout.addWidget(subtitle)
@@ -172,7 +217,7 @@ class HomeView(QWidget):
         self.lbl_cracks_label.setProperty("class", "kpiLabel")
         self.lbl_cracks_val = QLabel("0 (0%)")
         self.lbl_cracks_val.setProperty("class", "kpiVal")
-        self.lbl_cracks_val.setStyleSheet("color: #f43f5e;") # red highlight
+        self.lbl_cracks_val.setStyleSheet("color: #dc2626; font-size: 18px;") # red highlight
         crk_layout.addWidget(self.lbl_cracks_label)
         crk_layout.addWidget(self.lbl_cracks_val)
 
@@ -184,7 +229,7 @@ class HomeView(QWidget):
         self.lbl_speed_label.setProperty("class", "kpiLabel")
         self.lbl_speed_val = QLabel("0.00s")
         self.lbl_speed_val.setProperty("class", "kpiVal")
-        self.lbl_speed_val.setStyleSheet("color: #10b981;") # green highlight
+        self.lbl_speed_val.setStyleSheet("color: #16a34a; font-size: 18px;") # green highlight
         spd_layout.addWidget(self.lbl_speed_label)
         spd_layout.addWidget(self.lbl_speed_val)
 
@@ -196,7 +241,7 @@ class HomeView(QWidget):
         self.lbl_model_label.setProperty("class", "kpiLabel")
         self.lbl_model_val = QLabel("N/A")
         self.lbl_model_val.setProperty("class", "kpiVal")
-        self.lbl_model_val.setStyleSheet("color: #06b6d4; font-size: 16px; margin-top: 10px;") # teal highlight
+        self.lbl_model_val.setStyleSheet("color: #000080; font-size: 11px; font-weight: bold; margin-top: 10px;") # Navy highlight
         mdl_layout.addWidget(self.lbl_model_label)
         mdl_layout.addWidget(self.lbl_model_val)
 
@@ -299,9 +344,9 @@ class HomeView(QWidget):
         
         # Set KPI highlight color based on crack rate
         if cracks_detected > 0:
-            self.lbl_cracks_val.setStyleSheet("color: #f43f5e; font-size: 26px; font-weight: bold;")
+            self.lbl_cracks_val.setStyleSheet("color: #dc2626; font-size: 18px; font-weight: bold;")
         else:
-            self.lbl_cracks_val.setStyleSheet("color: #10b981; font-size: 26px; font-weight: bold;")
+            self.lbl_cracks_val.setStyleSheet("color: #16a34a; font-size: 18px; font-weight: bold;")
 
         avg_speed = sum(rec.get("elapsed_time", 0.0) for rec in history) / total_inspected if total_inspected > 0 else 0.0
         self.lbl_speed_val.setText(f"{avg_speed:.2f}s")
@@ -364,10 +409,10 @@ class HomeView(QWidget):
             status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
             if crack_detected:
                 status_widget.setText(f"⚠️ YES ({crack_count})")
-                status_widget.setStyleSheet("color: #f43f5e; font-weight: bold; background: transparent;")
+                status_widget.setStyleSheet("color: #dc2626; font-weight: bold; background: transparent;")
             else:
                 status_widget.setText("✅ NONE")
-                status_widget.setStyleSheet("color: #10b981; font-weight: bold; background: transparent;")
+                status_widget.setStyleSheet("color: #16a34a; font-weight: bold; background: transparent;")
             self.table_recent.setCellWidget(row_idx, 3, status_widget)
             
             # Column 4: Max Confidence

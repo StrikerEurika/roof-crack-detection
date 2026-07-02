@@ -15,19 +15,19 @@ class InspectionChart(QWidget):
         
         self.chart = QChart()
         # Theme/styling
-        self.chart.setBackgroundRoundness(8)
-        self.chart.setBackgroundBrush(QColor("#1e293b")) # matches cardbg
-        self.chart.setTitleBrush(QColor("#f8fafc")) # white text
+        self.chart.setBackgroundRoundness(0)
+        self.chart.setBackgroundBrush(QColor("#d4d0c8")) # Win32 COLOR_3DFACE
+        self.chart.setTitleBrush(QColor("#000000")) # Win32 black text
         self.chart.setTitle("7-Day Inspection Analytics")
-        title_font = QFont("Segoe UI", 12, QFont.Weight.Bold)
+        title_font = QFont("Tahoma", 9, QFont.Weight.Bold)
         self.chart.setTitleFont(title_font)
         
         # Legend styling
         legend = self.chart.legend()
         legend.setVisible(True)
         legend.setAlignment(Qt.AlignmentFlag.AlignBottom)
-        legend.setLabelColor(QColor("#94a3b8"))
-        legend.setFont(QFont("Segoe UI", 9))
+        legend.setLabelColor(QColor("#000000"))
+        legend.setFont(QFont("Tahoma", 8))
         
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -80,16 +80,16 @@ class InspectionChart(QWidget):
         # X-Axis configuration
         axis_x = QBarCategoryAxis()
         axis_x.append(days)
-        axis_x.setLabelsColor(QColor("#94a3b8"))
-        axis_x.setLinePenColor(QColor("#334155"))
+        axis_x.setLabelsColor(QColor("#000000"))
+        axis_x.setLinePenColor(QColor("#808080"))
         self.chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
         series.attachAxis(axis_x)
         
         # Y-Axis configuration
         axis_y = QValueAxis()
-        axis_y.setLabelsColor(QColor("#94a3b8"))
-        axis_y.setLinePenColor(QColor("#334155"))
-        axis_y.setGridLineColor(QColor("#334155"))
+        axis_y.setLabelsColor(QColor("#000000"))
+        axis_y.setLinePenColor(QColor("#808080"))
+        axis_y.setGridLineColor(QColor("#e2e8f0"))
         # Dynamic range
         max_val = max([inspected_counts[d] for d in days] + [5]) # minimum 5 ticks
         axis_y.setRange(0, max_val + 1)

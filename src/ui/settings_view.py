@@ -18,16 +18,22 @@ class SettingsView(QWidget):
         # Stylesheet (Consistent with dark theme)
         self.setStyleSheet("""
             QWidget {
-                background-color: #0f172a;
-                color: #f8fafc;
+                background-color: #d4d0c8;
+                color: #000000;
+                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
+                font-size: 11px;
             }
             QGroupBox {
-                border: 1px solid #334155;
-                border-radius: 8px;
+                border: 2px solid;
+                border-top-color: #808080;
+                border-left-color: #808080;
+                border-right-color: #ffffff;
+                border-bottom-color: #ffffff;
                 margin-top: 15px;
                 padding-top: 15px;
                 font-weight: bold;
-                color: #e2e8f0;
+                color: #000000;
+                border-radius: 0px;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -35,51 +41,92 @@ class SettingsView(QWidget):
                 padding: 0 3px 0 3px;
             }
             QLabel {
-                font-size: 12px;
-                color: #cbd5e1;
+                font-size: 11px;
+                color: #000000;
             }
             QComboBox, QSlider {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 4px;
-                color: #f8fafc;
+                background-color: #ffffff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #ffffff;
+                border-bottom: 2px solid #ffffff;
+                border-radius: 0px;
+                padding: 3px;
+                color: #000000;
             }
             QPushButton.primaryBtn {
-                background-color: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px 12px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 11px;
             }
             QPushButton.primaryBtn:hover {
-                background-color: #2563eb;
+                background-color: #e0ded9;
+            }
+            QPushButton.primaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 9px;
+                padding-left: 13px;
+                padding-bottom: 7px;
+                padding-right: 11px;
             }
             QPushButton.dangerBtn {
-                background-color: #ef4444;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 8px 12px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 11px;
             }
             QPushButton.dangerBtn:hover {
-                background-color: #dc2626;
+                background-color: #e0ded9;
+            }
+            QPushButton.dangerBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 9px;
+                padding-left: 13px;
+                padding-bottom: 7px;
+                padding-right: 11px;
             }
             QPushButton.secondaryBtn {
-                background-color: #1e293b;
-                color: #f8fafc;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 8px;
+                background-color: #d4d0c8;
+                color: #000000;
+                border-top: 1.5px solid #ffffff;
+                border-left: 1.5px solid #ffffff;
+                border-right: 1.5px solid #808080;
+                border-bottom: 1.5px solid #808080;
+                border-radius: 0px;
+                padding: 6px 12px;
                 font-weight: bold;
             }
             QPushButton.secondaryBtn:hover {
-                background-color: #334155;
-                border: 1px solid #3b82f6;
+                background-color: #e0ded9;
+            }
+            QPushButton.secondaryBtn:pressed {
+                border-top: 1.5px solid #808080;
+                border-left: 1.5px solid #808080;
+                border-right: 1.5px solid #ffffff;
+                border-bottom: 1.5px solid #ffffff;
+                padding-top: 7px;
+                padding-left: 13px;
+                padding-bottom: 5px;
+                padding-right: 11px;
             }
         """)
 
@@ -90,7 +137,7 @@ class SettingsView(QWidget):
 
         # Title
         title = QLabel("System Settings")
-        title.setStyleSheet("font-size: 26px; font-weight: bold; color: #f8fafc;")
+        title.setStyleSheet("font-size: 12px; font-weight: bold; color: #000000;")
         self.main_layout.addWidget(title)
 
         # 1. Model Defaults Group
