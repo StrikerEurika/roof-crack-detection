@@ -1,0 +1,29 @@
+{
+    "model_variant": "Seg_UNET_CFD_actual_v2",
+    "device": "cuda",
+    "confidence_threshold": 0.5,
+    "patch_size": 512,
+    "overlap_ratio": 0.2,
+    "use_tta": false,
+    "use_clahe": true,
+    "clahe_clip_limit": 2.0,
+    "overlay_alpha": 0.4,
+    "overlay_color": [
+        255,
+        0,
+        0
+    ],
+    "box_color": [
+        0,
+        255,
+        0
+    ],
+    "box_thickness": 2,
+    "contour_color": [
+        0,
+        0,
+        255
+    ],
+    "contour_thickness": 2,
+    "default_reports_dir": "reports"
+}

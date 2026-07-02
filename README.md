@@ -110,6 +110,14 @@ Every directory in `src/` functions as an independent Python package with a dedi
 
 ---
 
+## ⚙️ System Configuration
+
+The system's configurations are saved dynamically in `settings/config.json`. 
+- For a template blueprint, see [config.json.example](file:///D:/codes/projects/interns/intern-year-four/crack/roof-crack-detection/settings/config.json.example).
+- For a full breakdown of parameters, types, and defaults, refer to the [Configuration Guide](file:///D:/codes/projects/interns/intern-year-four/crack/roof-crack-detection/docs/configuration.md).
+
+---
+
 ## 📝 Best Practices & Coding Standards
 
 1. **Explicit Packages**: Always define an `__init__.py` in folders inside `src/`. Export public symbols using `__all__`.

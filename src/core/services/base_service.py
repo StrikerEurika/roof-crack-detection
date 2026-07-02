@@ -9,6 +9,7 @@ class BaseService:
     def build_pipeline_config(self, model_variant, device, confidence_threshold,
                                patch_size, overlap_ratio, use_tta, use_clahe,
                                config_overrides=None) -> dict:
+        """Builds a pipeline configuration dictionary based on provided parameters and optional overrides."""
         config = {
             "model_variant": model_variant,
             "device": device,
