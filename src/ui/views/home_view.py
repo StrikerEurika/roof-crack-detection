@@ -10,7 +10,7 @@ from qfluentwidgets import (
     BodyLabel, CaptionLabel, PushButton, TableWidget, FluentIcon as FIF
 )
 
-from .components import InspectionChart
+from src.ui.components import InspectionChart
 
 class HomeView(QWidget):
     """The landing homepage dashboard of the crack inspection desktop application."""

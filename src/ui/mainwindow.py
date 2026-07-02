@@ -3,10 +3,7 @@ from PySide6.QtCore import Slot
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
 
-from .home_view import HomeView
-from .inspection_view import InspectionView
-from .batch_view import BatchView
-from .settings_view import SettingsView
+from .views import HomeView, InspectionView, BatchView, SettingsView
 
 class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets."""

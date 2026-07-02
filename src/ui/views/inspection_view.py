@@ -14,9 +14,10 @@ from qfluentwidgets import (
     ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF
 )
 
-from .components import ImageViewer
+from src.ui.components import ImageViewer
 from src.workers import InferenceWorker
 from src.reports import PDFReportGenerator
+from src import check_gpu_available
 
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results."""
@@ -90,17 +91,8 @@ class InspectionView(QWidget):
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
         
-        # Check GPU availability dynamically
-        has_gpu = False
-        try:
-            import onnxruntime as ort
-            has_gpu = any("CUDA" in p for p in ort.get_available_providers())
-        except ImportError:
-            try:
-                import torch
-                has_gpu = torch.cuda.is_available()
-            except ImportError:
-                pass
+        has_gpu = check_gpu_available()
+
                 
         if not has_gpu:
             self.combo_device.setCurrentText("cpu")
