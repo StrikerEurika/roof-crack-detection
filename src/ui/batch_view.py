@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, Signal, Slot
-from ..workers.batch_worker import BatchWorker
+from src.workers import BatchWorker
 
 class BatchView(QWidget):
     """View widget for folder-level batch roof crack detection."""

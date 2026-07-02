@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt, Signal, Slot, QRectF
-from .components.image_viewer import ImageViewer
-from ..workers.inference_worker import InferenceWorker
-from ..reports.pdf_generator import PDFReportGenerator
+from .components import ImageViewer
+from src.workers import InferenceWorker
+from src.reports import PDFReportGenerator
 
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results."""

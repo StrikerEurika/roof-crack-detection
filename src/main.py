@@ -8,8 +8,8 @@ if project_root not in sys.path:
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
-from src.controllers.history_manager import HistoryManager
-from src.ui.mainwindow import MainWindow
+from src.controllers import HistoryManager
+from src.ui import MainWindow
 
 def main():
     # Set the working directory to the project root

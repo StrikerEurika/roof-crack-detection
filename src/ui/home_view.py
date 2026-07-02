@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QColor, QFont, QPixmap, QIcon
 from PySide6.QtCore import Qt, Signal, QSize
-from .components.custom_chart import InspectionChart
+from .components import InspectionChart
 
 class HomeView(QWidget):
     """The landing homepage dashboard of the crack inspection desktop application."""
