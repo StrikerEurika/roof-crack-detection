@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
 from PySide6.QtGui import QPixmap, QPainter, QImage
 from PySide6.QtCore import Qt, Signal
+import numpy as np
 
 class ImageViewer(QGraphicsView):
     """An interactive image viewer widget supporting zooming, panning, and drag-and-drop notifications."""
@@ -40,10 +41,51 @@ class ImageViewer(QGraphicsView):
         self.fit_in_view()
 
     def set_ndarray_image(self, ndarray_img):
-        """Loads a NumPy array (RGB) image into the viewer."""
-        h, w, c = ndarray_img.shape
-        bytes_per_line = c * w
-        q_img = QImage(ndarray_img.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        """Loads a NumPy array (RGB, RGBA, Grayscale, or Binary) image into the viewer."""
+        # Ensure it is a contiguous numpy array
+        ndarray_img = np.ascontiguousarray(ndarray_img)
+        
+        # Check shape dimensions
+        if len(ndarray_img.shape) == 2:
+            h, w = ndarray_img.shape
+            c = 1
+        elif len(ndarray_img.shape) == 3:
+            h, w, c = ndarray_img.shape
+        else:
+            raise ValueError(f"Unsupported image shape: {ndarray_img.shape}")
+
+        # Handle grayscale/binary (1-channel) images
+        if c == 1:
+            if len(ndarray_img.shape) == 3:
+                ndarray_img = ndarray_img[:, :, 0]
+            
+            # Ensure proper type and range
+            if ndarray_img.dtype == bool:
+                ndarray_img = (ndarray_img * 255).astype("uint8")
+            elif ndarray_img.dtype != np.uint8:
+                # If it's a float in [0.0, 1.0] range or other int range
+                if ndarray_img.max() <= 1.0:
+                    ndarray_img = (ndarray_img * 255).astype("uint8")
+                else:
+                    ndarray_img = ndarray_img.astype("uint8")
+            else:
+                # It is already uint8. Check if values are only 0 and 1 (binary mask)
+                # and scale to 0 and 255 for better visibility
+                unique_vals = np.unique(ndarray_img)
+                if len(unique_vals) <= 2 and all(val in (0, 1) for val in unique_vals):
+                    ndarray_img = ndarray_img * 255
+
+            bytes_per_line = w
+            q_img = QImage(ndarray_img.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
+        elif c == 3:
+            bytes_per_line = 3 * w
+            q_img = QImage(ndarray_img.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        elif c == 4:
+            bytes_per_line = 4 * w
+            q_img = QImage(ndarray_img.data, w, h, bytes_per_line, QImage.Format.Format_RGBA8888)
+        else:
+            raise ValueError(f"Unsupported number of channels: {c}")
+
         pix = QPixmap.fromImage(q_img)
         self.set_image(pix)
 

@@ -17,6 +17,7 @@ from qfluentwidgets import (
 from src.ui.components import ImageViewer
 from src.workers import InferenceWorker
 from src.reports import PDFReportGenerator
+from src.services import InspectionService
 from src import check_gpu_available
 
 class InspectionView(QWidget):
@@ -32,6 +33,7 @@ class InspectionView(QWidget):
         self.current_image_path = None
         self.latest_result = None
         self.latest_record = None
+        self.inspection_service = InspectionService(history_manager)
 
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
@@ -316,23 +318,15 @@ class InspectionView(QWidget):
             self.txt_status.setText("Error: Load a valid image first.")
             return
 
-        # Prepare config
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.combo_patch.currentText()),
-            "overlap_ratio": self.slider_overlap.value() / 100.0,
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "clahe_clip_limit": 2.0,
-            "overlay_alpha": self.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.hm.config.get("box_thickness", 2),
-            "contour_color": self.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.hm.config.get("contour_thickness", 2)
-        }
+        pipeline_config = self.inspection_service.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            patch_size=int(self.combo_patch.currentText()),
+            overlap_ratio=self.slider_overlap.value() / 100.0,
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
 
         # Setup worker thread
         self.btn_run.setEnabled(False)
