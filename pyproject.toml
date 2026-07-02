@@ -6,4 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "findcrack>=0.1.5",
+    "pillow>=12.3.0",
+    "pyside6>=6.11.1",
+    "pyside6-fluent-widgets>=1.11.2",
 ]
