@@ -45,212 +45,42 @@ class PDFReportGenerator:
             original_path = record.get("image_path", "").replace("\\", "/")
             vis_path = record.get("vis_image_path", "").replace("\\", "/")
             
-            # Build HTML content
-            html = f"""
-            <html>
-            <head>
-                <style>
-                    body {{
-                        font-family: 'Segoe UI', Arial, sans-serif;
-                        color: #1e293b;
-                        margin: 0;
-                        padding: 0;
-                    }}
-                    .header {{
-                        background-color: #121824;
-                        color: #ffffff;
-                        padding: 20px;
-                        border-bottom: 4px solid {status_color};
-                    }}
-                    .header h1 {{
-                        margin: 0;
-                        font-size: 24px;
-                        letter-spacing: 0.5px;
-                    }}
-                    .header p {{
-                        margin: 5px 0 0 0;
-                        color: #94a3b8;
-                        font-size: 14px;
-                    }}
-                    .container {{
-                        padding: 25px;
-                    }}
-                    .badge {{
-                        background-color: {status_color};
-                        color: white;
-                        padding: 8px 15px;
-                        border-radius: 4px;
-                        font-weight: bold;
-                        display: inline-block;
-                        font-size: 14px;
-                        margin-bottom: 20px;
-                    }}
-                    .section-title {{
-                        font-size: 16px;
-                        color: #0f172a;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 5px;
-                        margin-top: 25px;
-                        margin-bottom: 15px;
-                        font-weight: bold;
-                    }}
-                    .grid {{
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 20px;
-                    }}
-                    .grid td {{
-                        padding: 10px;
-                        border: 1px solid #e2e8f0;
-                        font-size: 13px;
-                    }}
-                    .grid td.label {{
-                        background-color: #f8fafc;
-                        font-weight: bold;
-                        width: 25%;
-                        color: #475569;
-                    }}
-                    .grid td.value {{
-                        width: 25%;
-                    }}
-                    .kpi-container {{
-                        margin-bottom: 20px;
-                    }}
-                    .kpi-card {{
-                        background-color: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 6px;
-                        padding: 15px;
-                        text-align: center;
-                        margin-right: 15px;
-                    }}
-                    .kpi-value {{
-                        font-size: 22px;
-                        font-weight: bold;
-                        color: #0f172a;
-                        margin-top: 5px;
-                    }}
-                    .kpi-label {{
-                        font-size: 11px;
-                        color: #64748b;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    }}
-                    .recommendation-box {{
-                        background-color: #f8fafc;
-                        border-left: 5px solid {status_color};
-                        padding: 15px;
-                        font-size: 13px;
-                        line-height: 1.5;
-                        margin-bottom: 25px;
-                        border-top: 1px solid #e2e8f0;
-                        border-right: 1px solid #e2e8f0;
-                        border-bottom: 1px solid #e2e8f0;
-                        border-radius: 0 4px 4px 0;
-                    }}
-                    .image-container {{
-                        text-align: center;
-                        margin-top: 15px;
-                    }}
-                    .image-box {{
-                        display: inline-block;
-                        width: 48%;
-                        vertical-align: top;
-                    }}
-                    .image-box img {{
-                        width: 100%;
-                        height: auto;
-                        border: 2px solid #cbd5e1;
-                        border-radius: 4px;
-                        max-height: 320px;
-                    }}
-                    .image-box p {{
-                        font-size: 12px;
-                        color: #64748b;
-                        margin-top: 5px;
-                    }}
-                    .footer {{
-                        margin-top: 40px;
-                        border-top: 1px solid #e2e8f0;
-                        padding-top: 15px;
-                        text-align: center;
-                        font-size: 11px;
-                        color: #94a3b8;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>ROOF CRACK DETECTION REPORT</h1>
-                    <p>Roof Inspection ID: {record.get("id", "N/A")}</p>
-                </div>
-                
-                <div class="container">
-                    <div class="badge">{status_text}</div>
-                    
-                    <div class="section-title">Inspection Summary</div>
-                    <table class="grid">
-                        <tr>
-                            <td class="label">Image Name</td>
-                            <td class="value" colspan="3">{record.get("image_name", "N/A")}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Date & Time</td>
-                            <td class="value">{formatted_date}</td>
-                            <td class="label">Model Variant</td>
-                            <td class="value">{record.get("model_used", "N/A")}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Detection Confidence</td>
-                            <td class="value">{record.get("confidence", 0.0) * 100:.1f}%</td>
-                            <td class="label">Processing Duration</td>
-                            <td class="value">{record.get("elapsed_time", 0.0):.2f} seconds</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Crack Regions Found</td>
-                            <td class="value">{record.get("crack_count", 0)}</td>
-                            <td class="label">Severity Rating</td>
-                            <td class="value" style="font-weight: bold; color: {status_color};">{severity}</td>
-                        </tr>
-                    </table>
-                    
-                    <div class="section-title">Action & Recommendations</div>
-                    <div class="recommendation-box">
-                        {recommendation}
-                    </div>
-                    
-                    <div class="section-title">Visual Evidence</div>
-                    <div class="image-container">
-            """
-            
-            # Embed image tags if files exist
+            # Build visual evidence HTML block
+            visual_evidence = ""
             if os.path.exists(original_path):
-                html += f"""
-                        <div class="image-box" style="margin-right: 2%;">
-                            <img src="{original_path}">
-                            <p>Original Roof Image</p>
-                        </div>
-                """
-            
-            if vis_path and os.path.exists(vis_path):
-                html += f"""
-                        <div class="image-box">
-                            <img src="{vis_path}">
-                            <p>Analyzed Surface Overlay & Detections</p>
-                        </div>
-                """
-                
-            html += f"""
-                    </div>
-                    
-                    <div class="footer">
-                        Generated automatically by Roof Crack Inspection System Desktop Suite | Confident Material Analytics
-                    </div>
+                visual_evidence += f"""
+                <div class="image-box" style="margin-right: 2%;">
+                    <img src="{original_path}">
+                    <p>Original Roof Image</p>
                 </div>
-            </body>
-            </html>
-            """
-            
+                """
+            if vis_path and os.path.exists(vis_path):
+                visual_evidence += f"""
+                <div class="image-box">
+                    <img src="{vis_path}">
+                    <p>Analyzed Surface Overlay & Detections</p>
+                </div>
+                """
+
+            # Load report template
+            template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report_template.html")
+            with open(template_path, "r", encoding="utf-8") as f:
+                html = f.read()
+
+            # Format the template with record values
+            html = html.replace("{status_color}", status_color)
+            html = html.replace("{status_text}", status_text)
+            html = html.replace("{inspection_id}", record.get("id", "N/A"))
+            html = html.replace("{image_name}", record.get("image_name", "N/A"))
+            html = html.replace("{formatted_date}", formatted_date)
+            html = html.replace("{model_used}", record.get("model_used", "N/A"))
+            html = html.replace("{confidence}", f"{record.get('confidence', 0.0) * 100:.1f}%")
+            html = html.replace("{elapsed_time}", f"{record.get('elapsed_time', 0.0):.2f}")
+            html = html.replace("{crack_count}", str(record.get("crack_count", 0)))
+            html = html.replace("{severity}", severity)
+            html = html.replace("{recommendation}", recommendation)
+            html = html.replace("{visual_evidence}", visual_evidence)
+
             # Create QTextDocument and print to QPrinter
             doc = QTextDocument()
             doc.setHtml(html)
@@ -259,8 +89,6 @@ class PDFReportGenerator:
             printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
             printer.setOutputFileName(output_pdf_path)
             printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-            
-            # Margins
             printer.setPageMargins(0.5, 0.5, 0.5, 0.5, QPrinter.Unit.Inch)
             
             # Execute print

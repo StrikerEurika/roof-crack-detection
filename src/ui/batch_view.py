@@ -2,13 +2,17 @@ import os
 import time
 from PIL import Image
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QFileDialog, QGroupBox, QSlider, QCheckBox, QComboBox, 
-    QTableWidget, QTableWidgetItem, QHeaderView, 
-    QAbstractItemView, QProgressBar, QTextEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, Signal, Slot
+
+from qfluentwidgets import (
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
+    ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
+    ProgressBar, TextEdit, TableWidget, FluentIcon as FIF
+)
+
 from src.workers import BatchWorker
 
 class BatchView(QWidget):
@@ -24,202 +28,72 @@ class BatchView(QWidget):
         self.input_dir = None
         self.output_dir = None
         
-        # Stylesheet (Consistent with dark theme)
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #d4d0c8;
-                color: #000000;
-                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
-                font-size: 11px;
-            }
-            QGroupBox {
-                border: 2px solid;
-                border-top-color: #808080;
-                border-left-color: #808080;
-                border-right-color: #ffffff;
-                border-bottom-color: #ffffff;
-                margin-top: 15px;
-                padding-top: 15px;
-                font-weight: bold;
-                color: #000000;
-                border-radius: 0px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 3px 0 3px;
-            }
-            QLabel {
-                font-size: 11px;
-                color: #000000;
-            }
-            QComboBox, QSlider {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                border-radius: 0px;
-                padding: 3px;
-                color: #000000;
-            }
-            QPushButton.primaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 8px 12px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton.primaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.primaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 9px;
-                padding-left: 13px;
-                padding-bottom: 7px;
-                padding-right: 11px;
-            }
-            QPushButton.primaryBtn:disabled {
-                background-color: #d4d0c8;
-                color: #808080;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-            }
-            QPushButton.secondaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-            QPushButton.secondaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.secondaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 7px;
-                padding-left: 13px;
-                padding-bottom: 5px;
-                padding-right: 11px;
-            }
-            QProgressBar {
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                background-color: #ffffff;
-                text-align: center;
-                color: #000000;
-                font-weight: bold;
-                border-radius: 0px;
-            }
-            QProgressBar::chunk {
-                background-color: #000080; /* navy indicator for progress */
-                width: 8px;
-                margin: 0.5px;
-                border-radius: 0px;
-            }
-            QTableWidget {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                gridline-color: #d4d0c8;
-                border-radius: 0px;
-                color: #000000;
-            }
-            QTableWidget::item {
-                border-bottom: 1px solid #d4d0c8;
-            }
-            QHeaderView::section {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1px solid #ffffff;
-                border-left: 1px solid #ffffff;
-                border-right: 1px solid #808080;
-                border-bottom: 1px solid #808080;
-                padding: 3px;
-                font-weight: bold;
-            }
-        """)
-
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(15, 15, 15, 15)
-        self.layout.setSpacing(15)
+        self.layout.setContentsMargins(24, 24, 24, 24)
+        self.layout.setSpacing(20)
 
         # 1. Left Control Panel
         self.setup_control_panel()
 
-        # 2. Right Display Panel (Queue list and progress logs)
+        # 2. Right Display Panel
         self.setup_queue_panel()
 
     def setup_control_panel(self):
-        self.panel_left = QWidget()
+        self.panel_left = QWidget(self)
         self.panel_left.setFixedWidth(300)
         left_layout = QVBoxLayout(self.panel_left)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(15)
+        left_layout.setSpacing(16)
 
-        # Group 1: Source & Output Directory
-        group_folders = QGroupBox("1. Setup Folders")
-        folders_layout = QVBoxLayout(group_folders)
+        # Card 1: Folder selection
+        self.card_folders = SimpleCardWidget(self.panel_left)
+        folders_layout = QVBoxLayout(self.card_folders)
+        folders_layout.setSpacing(8)
         
-        self.btn_select_input = QPushButton("📁 Input Images Folder...")
-        self.btn_select_input.setProperty("class", "secondaryBtn")
+        folders_title = SubtitleLabel("1. Setup Folders", self.card_folders)
+        folders_layout.addWidget(folders_title)
+        
+        self.btn_select_input = PushButton(FIF.FOLDER, "Input Folder...", self.card_folders)
         self.btn_select_input.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_select_input.clicked.connect(self.select_input_dir)
         folders_layout.addWidget(self.btn_select_input)
 
-        self.lbl_input_dir = QLabel("No input directory selected")
+        self.lbl_input_dir = BodyLabel("No input directory selected", self.card_folders)
         self.lbl_input_dir.setWordWrap(True)
-        self.lbl_input_dir.setStyleSheet("color: #404040; font-style: italic;")
+        self.lbl_input_dir.setStyleSheet("color: #606060; font-style: italic;")
         folders_layout.addWidget(self.lbl_input_dir)
 
-        self.btn_select_output = QPushButton("📁 Output Results Folder...")
-        self.btn_select_output.setProperty("class", "secondaryBtn")
+        self.btn_select_output = PushButton(FIF.FOLDER, "Output Folder...", self.card_folders)
         self.btn_select_output.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_select_output.clicked.connect(self.select_output_dir)
         folders_layout.addWidget(self.btn_select_output)
 
-        self.lbl_output_dir = QLabel("No output directory selected")
+        self.lbl_output_dir = BodyLabel("No output directory selected", self.card_folders)
         self.lbl_output_dir.setWordWrap(True)
-        self.lbl_output_dir.setStyleSheet("color: #404040; font-style: italic;")
+        self.lbl_output_dir.setStyleSheet("color: #606060; font-style: italic;")
         folders_layout.addWidget(self.lbl_output_dir)
 
-        # Group 2: Model Configuration
-        group_model = QGroupBox("2. Model & Batch Settings")
-        model_layout = QVBoxLayout(group_model)
+        left_layout.addWidget(self.card_folders)
+
+        # Card 2: Model Configuration
+        self.card_model = SimpleCardWidget(self.panel_left)
+        model_layout = QVBoxLayout(self.card_model)
+        model_layout.setSpacing(10)
         
-        model_layout.addWidget(QLabel("Pre-trained Model Zoo:"))
-        self.combo_model = QComboBox()
+        model_title = SubtitleLabel("2. Batch Settings", self.card_model)
+        model_layout.addWidget(model_title)
+        
+        model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
+        self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
         self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
         model_layout.addWidget(self.combo_model)
         
-        model_layout.addWidget(QLabel("Compute Device:"))
-        self.combo_device = QComboBox()
+        model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
+        self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
-        # Check GPU availability dynamically without requiring torch at startup
+        
         has_gpu = False
         try:
             import onnxruntime as ort
@@ -238,64 +112,58 @@ class BatchView(QWidget):
         model_layout.addWidget(self.combo_device)
 
         # Threshold slider
-        self.lbl_thresh = QLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}")
+        self.lbl_thresh = BodyLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}", self.card_model)
         model_layout.addWidget(self.lbl_thresh)
-        self.slider_thresh = QSlider(Qt.Orientation.Horizontal)
+        self.slider_thresh = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_thresh.setRange(10, 90)
         self.slider_thresh.setValue(int(self.hm.config.get("confidence_threshold", 0.5) * 100))
         self.slider_thresh.valueChanged.connect(self.on_thresh_changed)
         model_layout.addWidget(self.slider_thresh)
 
-        self.chk_clahe = QCheckBox("Apply CLAHE Preprocessing")
+        self.chk_clahe = CheckBox("Apply CLAHE Preprocessing", self.card_model)
         self.chk_clahe.setChecked(self.hm.config.get("use_clahe", True))
         model_layout.addWidget(self.chk_clahe)
         
-        self.chk_tta = QCheckBox("Use Test-Time Augmentation (TTA)")
+        self.chk_tta = CheckBox("Use Test-Time Augmentation", self.card_model)
         self.chk_tta.setChecked(self.hm.config.get("use_tta", False))
         model_layout.addWidget(self.chk_tta)
 
+        left_layout.addWidget(self.card_model)
+
         # Action Buttons
-        self.btn_start = QPushButton("⚡ START BATCH INSPECTION")
-        self.btn_start.setProperty("class", "primaryBtn")
-        self.btn_start.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # green
+        self.btn_start = PrimaryPushButton("⚡ START BATCH INSPECTION", self.panel_left)
         self.btn_start.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_start.setEnabled(False)
         self.btn_start.clicked.connect(self.start_batch)
+        left_layout.addWidget(self.btn_start)
 
-        self.btn_cancel = QPushButton("🛑 CANCEL BATCH")
-        self.btn_cancel.setProperty("class", "primaryBtn")
-        self.btn_cancel.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # red
+        self.btn_cancel = PushButton(FIF.CLOSE, "🛑 CANCEL BATCH", self.panel_left)
         self.btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_cancel.setEnabled(False)
         self.btn_cancel.clicked.connect(self.cancel_batch)
-
-        left_layout.addWidget(group_folders)
-        left_layout.addWidget(group_model)
-        left_layout.addWidget(self.btn_start)
         left_layout.addWidget(self.btn_cancel)
         left_layout.addStretch()
 
         self.layout.addWidget(self.panel_left)
 
     def setup_queue_panel(self):
-        self.panel_right = QWidget()
+        self.panel_right = QWidget(self)
         right_layout = QVBoxLayout(self.panel_right)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(15)
+        right_layout.setSpacing(16)
 
         # Header Details
-        lbl_queue_title = QLabel("Batch Execution Progress")
-        lbl_queue_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #000000;")
+        lbl_queue_title = SubtitleLabel("Batch Execution Progress", self.panel_right)
         right_layout.addWidget(lbl_queue_title)
 
         # Progress bar
-        self.progress_bar = QProgressBar()
+        self.progress_bar = ProgressBar(self.panel_right)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("%v/%m files completed (%p%)")
         right_layout.addWidget(self.progress_bar)
 
         # Table showing active process queue
-        self.table_queue = QTableWidget()
+        self.table_queue = TableWidget(self.panel_right)
         self.table_queue.setColumnCount(6)
         self.table_queue.setHorizontalHeaderLabels(["Index", "Filename", "Cracks Detected", "Count", "Max Conf", "Status"])
         self.table_queue.verticalHeader().setVisible(False)
@@ -314,9 +182,8 @@ class BatchView(QWidget):
         right_layout.addWidget(self.table_queue, stretch=3)
 
         # Log details
-        self.txt_log = QTextEdit()
+        self.txt_log = TextEdit(self.panel_right)
         self.txt_log.setReadOnly(True)
-        self.txt_log.setStyleSheet("background-color: #ffffff; border-top: 2px solid #808080; border-left: 2px solid #808080; border-right: 2px solid #ffffff; border-bottom: 2px solid #ffffff; color: #000000; font-size: 11px;")
         self.txt_log.setPlaceholderText("Logs will be shown here during batch processing.")
         self.txt_log.setMaximumHeight(150)
         right_layout.addWidget(self.txt_log, stretch=1)
@@ -447,10 +314,10 @@ class BatchView(QWidget):
         status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if crack_detected:
             status_widget.setText("⚠️ YES")
-            status_widget.setStyleSheet("color: #dc2626; font-weight: bold; background: transparent;")
+            status_widget.setStyleSheet("color: #e81123; font-weight: bold; background: transparent;")
         else:
             status_widget.setText("✅ NONE")
-            status_widget.setStyleSheet("color: #16a34a; font-weight: bold; background: transparent;")
+            status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
         self.table_queue.setCellWidget(row_idx, 2, status_widget)
 
         # Crack count
@@ -464,10 +331,9 @@ class BatchView(QWidget):
         status_item.setForeground(QColor("#10b981"))
         self.table_queue.setItem(row_idx, 5, status_item)
 
-        # Save result assets to the app's global assets folder so it is visible in Recents history!
+        # Save result assets to history
         results_obj = result.get("results_object")
         if results_obj:
-            # We copy / save the results inside the application results directory
             base_name, _ = os.path.splitext(filename)
             timestamp_slug = int(time.time())
             

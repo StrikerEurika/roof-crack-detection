@@ -1,14 +1,19 @@
 import os
 import time
+import numpy as np
 from PIL import Image
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QFileDialog, QTabWidget, QGroupBox, QSlider, QCheckBox, 
-    QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, 
-    QAbstractItemView, QProgressBar, QTextEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem
 )
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt, Signal, Slot, QRectF
+
+from qfluentwidgets import (
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
+    ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
+    ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF
+)
+
 from .components import ImageViewer
 from src.workers import InferenceWorker
 from src.reports import PDFReportGenerator
@@ -27,174 +32,10 @@ class InspectionView(QWidget):
         self.latest_result = None
         self.latest_record = None
 
-        # Style Sheets
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #d4d0c8;
-                color: #000000;
-                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
-                font-size: 11px;
-            }
-            QGroupBox {
-                border: 2px solid;
-                border-top-color: #808080;
-                border-left-color: #808080;
-                border-right-color: #ffffff;
-                border-bottom-color: #ffffff;
-                margin-top: 15px;
-                padding-top: 15px;
-                font-weight: bold;
-                color: #000000;
-                border-radius: 0px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 3px 0 3px;
-            }
-            QLabel {
-                font-size: 11px;
-                color: #000000;
-            }
-            QComboBox, QSlider {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                border-radius: 0px;
-                padding: 3px;
-                color: #000000;
-            }
-            QPushButton.primaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 8px 12px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton.primaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.primaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 9px;
-                padding-left: 13px;
-                padding-bottom: 7px;
-                padding-right: 11px;
-            }
-            QPushButton.primaryBtn:disabled {
-                background-color: #d4d0c8;
-                color: #808080;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-            }
-            QPushButton.secondaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-            QPushButton.secondaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.secondaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 7px;
-                padding-left: 13px;
-                padding-bottom: 5px;
-                padding-right: 11px;
-            }
-            QTabWidget::panel {
-                border-top: 2px solid #ffffff;
-                border-left: 2px solid #ffffff;
-                border-right: 2px solid #808080;
-                border-bottom: 2px solid #808080;
-                background-color: #d4d0c8;
-                border-radius: 0px;
-            }
-            QTabBar::tab {
-                background-color: #d4d0c8;
-                border-top: 2px solid #ffffff;
-                border-left: 2px solid #ffffff;
-                border-right: 2px solid #808080;
-                border-bottom: none;
-                border-top-left-radius: 0px;
-                border-top-right-radius: 0px;
-                padding: 5px 10px;
-                margin-right: 2px;
-                color: #000000;
-                font-weight: bold;
-            }
-            QTabBar::tab:selected {
-                background-color: #d4d0c8;
-                margin-top: -2px;
-                border-bottom: none;
-            }
-            QProgressBar {
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                background-color: #ffffff;
-                text-align: center;
-                color: #000000;
-                font-weight: bold;
-                border-radius: 0px;
-            }
-            QProgressBar::chunk {
-                background-color: #000080;
-                width: 8px;
-                margin: 0.5px;
-                border-radius: 0px;
-            }
-            QTableWidget {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                gridline-color: #d4d0c8;
-                color: #000000;
-                border-radius: 0px;
-            }
-            QTableWidget::item {
-                border-bottom: 1px solid #d4d0c8;
-            }
-            QHeaderView::section {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1px solid #ffffff;
-                border-left: 1px solid #ffffff;
-                border-right: 1px solid #808080;
-                border-bottom: 1px solid #808080;
-                padding: 3px;
-                font-weight: bold;
-            }
-        """)
-
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(15, 15, 15, 15)
-        self.layout.setSpacing(15)
+        self.layout.setContentsMargins(24, 24, 24, 24)
+        self.layout.setSpacing(20)
 
         # 1. Left Control Panel
         self.setup_control_panel()
@@ -203,44 +44,53 @@ class InspectionView(QWidget):
         self.setup_display_panel()
 
     def setup_control_panel(self):
-        self.panel_left = QWidget()
+        self.panel_left = QWidget(self)
         self.panel_left.setFixedWidth(300)
         left_layout = QVBoxLayout(self.panel_left)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(15)
+        left_layout.setSpacing(16)
 
-        # Group 1: Image Source Selection
-        group_source = QGroupBox("1. Select Target Roof Image")
-        source_layout = QVBoxLayout(group_source)
+        # Card 1: Image Source Selection
+        self.card_source = SimpleCardWidget(self.panel_left)
+        source_layout = QVBoxLayout(self.card_source)
+        source_layout.setSpacing(8)
         
-        self.btn_select_file = QPushButton("📁 Browse Image File...")
-        self.btn_select_file.setProperty("class", "secondaryBtn")
+        source_title = SubtitleLabel("1. Select Target Image", self.card_source)
+        source_layout.addWidget(source_title)
+        
+        self.btn_select_file = PushButton(FIF.FOLDER, "Browse Image File...", self.card_source)
         self.btn_select_file.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_select_file.clicked.connect(self.select_file)
         source_layout.addWidget(self.btn_select_file)
 
-        self.lbl_filename = QLabel("No image file loaded")
+        self.lbl_filename = BodyLabel("No image file loaded", self.card_source)
         self.lbl_filename.setWordWrap(True)
-        self.lbl_filename.setStyleSheet("color: #404040; font-style: italic;")
+        self.lbl_filename.setStyleSheet("color: #606060; font-style: italic;")
         source_layout.addWidget(self.lbl_filename)
         
-        # Group 2: Model Configuration
-        group_model = QGroupBox("2. Model & Inference Settings")
-        model_layout = QVBoxLayout(group_model)
+        left_layout.addWidget(self.card_source)
+        
+        # Card 2: Model Configuration
+        self.card_model = SimpleCardWidget(self.panel_left)
+        model_layout = QVBoxLayout(self.card_model)
+        model_layout.setSpacing(10)
+        
+        model_title = SubtitleLabel("2. Inference Settings", self.card_model)
+        model_layout.addWidget(model_title)
         
         # Model selector
-        model_layout.addWidget(QLabel("Pre-trained Model Zoo:"))
-        self.combo_model = QComboBox()
+        model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
+        self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
-        # Set default from config
         self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
         model_layout.addWidget(self.combo_model)
         
         # Device selector
-        model_layout.addWidget(QLabel("Compute Device:"))
-        self.combo_device = QComboBox()
+        model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
+        self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
-        # Check GPU availability dynamically without requiring torch at startup
+        
+        # Check GPU availability dynamically
         has_gpu = False
         try:
             import onnxruntime as ort
@@ -259,109 +109,105 @@ class InspectionView(QWidget):
         model_layout.addWidget(self.combo_device)
 
         # Threshold slider
-        self.lbl_thresh = QLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}")
+        self.lbl_thresh = BodyLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}", self.card_model)
         model_layout.addWidget(self.lbl_thresh)
-        self.slider_thresh = QSlider(Qt.Orientation.Horizontal)
+        self.slider_thresh = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_thresh.setRange(10, 90)
         self.slider_thresh.setValue(int(self.hm.config.get("confidence_threshold", 0.5) * 100))
         self.slider_thresh.valueChanged.connect(self.on_thresh_changed)
         model_layout.addWidget(self.slider_thresh)
 
         # Patch size
-        model_layout.addWidget(QLabel("Sliding Window Patch Size:"))
-        self.combo_patch = QComboBox()
+        model_layout.addWidget(BodyLabel("Sliding Window Patch Size:", self.card_model))
+        self.combo_patch = ComboBox(self.card_model)
         self.combo_patch.addItems(["256", "512", "1024"])
         self.combo_patch.setCurrentText(str(self.hm.config.get("patch_size", 512)))
         model_layout.addWidget(self.combo_patch)
 
         # Overlap ratio
-        self.lbl_overlap = QLabel(f"Patch Overlap Ratio: {self.hm.config.get('overlap_ratio', 0.2):.2f}")
+        self.lbl_overlap = BodyLabel(f"Patch Overlap Ratio: {self.hm.config.get('overlap_ratio', 0.2):.2f}", self.card_model)
         model_layout.addWidget(self.lbl_overlap)
-        self.slider_overlap = QSlider(Qt.Orientation.Horizontal)
+        self.slider_overlap = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_overlap.setRange(0, 50)
         self.slider_overlap.setValue(int(self.hm.config.get("overlap_ratio", 0.2) * 100))
         self.slider_overlap.valueChanged.connect(self.on_overlap_changed)
         model_layout.addWidget(self.slider_overlap)
 
         # Checkboxes
-        self.chk_clahe = QCheckBox("Apply CLAHE Preprocessing")
+        self.chk_clahe = CheckBox("Apply CLAHE Preprocessing", self.card_model)
         self.chk_clahe.setChecked(self.hm.config.get("use_clahe", True))
         model_layout.addWidget(self.chk_clahe)
         
-        self.chk_tta = QCheckBox("Use Test-Time Augmentation (TTA)")
+        self.chk_tta = CheckBox("Use Test-Time Augmentation", self.card_model)
         self.chk_tta.setChecked(self.hm.config.get("use_tta", False))
         model_layout.addWidget(self.chk_tta)
 
-        # Run Action
-        self.btn_run = QPushButton("⚡ RUN DETECTOR")
-        self.btn_run.setProperty("class", "primaryBtn")
+        left_layout.addWidget(self.card_model)
+
+        # Run Action Button
+        self.btn_run = PrimaryPushButton("⚡ RUN DETECTOR", self.panel_left)
         self.btn_run.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_run.setEnabled(False)
         self.btn_run.clicked.connect(self.run_detection)
-
-        # Log details
-        self.txt_status = QTextEdit()
-        self.txt_status.setReadOnly(True)
-        self.txt_status.setMaximumHeight(80)
-        self.txt_status.setStyleSheet("background-color: #ffffff; border-top: 2px solid #808080; border-left: 2px solid #808080; border-right: 2px solid #ffffff; border-bottom: 2px solid #ffffff; color: #000000; font-size: 11px;")
-        self.txt_status.setText("Load a roof image file to begin analysis.")
+        left_layout.addWidget(self.btn_run)
 
         # Progress bar
-        self.progress_bar = QProgressBar()
+        self.progress_bar = ProgressBar(self.panel_left)
         self.progress_bar.setVisible(False)
-
-        left_layout.addWidget(group_source)
-        left_layout.addWidget(group_model)
-        left_layout.addWidget(self.btn_run)
         left_layout.addWidget(self.progress_bar)
+
+        # Log details
+        self.txt_status = TextEdit(self.panel_left)
+        self.txt_status.setReadOnly(True)
+        self.txt_status.setMaximumHeight(80)
+        self.txt_status.setPlaceholderText("Load a roof image file to begin analysis.")
         left_layout.addWidget(self.txt_status)
         left_layout.addStretch()
 
         self.layout.addWidget(self.panel_left)
 
     def setup_display_panel(self):
-        self.panel_right = QWidget()
+        self.panel_right = QWidget(self)
         right_layout = QVBoxLayout(self.panel_right)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(15)
+        right_layout.setSpacing(16)
 
         # Tabs for Image Views
-        self.tab_widget = QTabWidget()
+        self.tab_widget = TabWidget(self.panel_right)
         
         # 1. Visualization tab
-        self.viewer_vis = ImageViewer()
+        self.viewer_vis = ImageViewer(self.tab_widget)
         self.viewer_vis.image_dropped.connect(self.on_image_dropped)
         self.tab_widget.addTab(self.viewer_vis, "🔍 Visualization Overlay")
         
         # 2. Original tab
-        self.viewer_orig = ImageViewer()
+        self.viewer_orig = ImageViewer(self.tab_widget)
         self.tab_widget.addTab(self.viewer_orig, "Original Image")
         
         # 3. Transparent Overlay tab
-        self.viewer_overlay = ImageViewer()
+        self.viewer_overlay = ImageViewer(self.tab_widget)
         self.tab_widget.addTab(self.viewer_overlay, "Crack Overlay")
 
         # 4. Binary Mask tab
-        self.viewer_mask = ImageViewer()
+        self.viewer_mask = ImageViewer(self.tab_widget)
         self.tab_widget.addTab(self.viewer_mask, "Binary Mask")
 
         # 5. Confidence Map tab
-        self.viewer_conf = ImageViewer()
+        self.viewer_conf = ImageViewer(self.tab_widget)
         self.tab_widget.addTab(self.viewer_conf, "Confidence Heatmap")
 
         right_layout.addWidget(self.tab_widget, stretch=4)
 
         # Bottom Area: Results Table & Actions
         results_layout = QHBoxLayout()
-        results_layout.setSpacing(15)
+        results_layout.setSpacing(16)
 
         # Results table
         table_container = QVBoxLayout()
-        lbl_results_title = QLabel("Detected Crack Components")
-        lbl_results_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #000000;")
+        lbl_results_title = SubtitleLabel("Detected Crack Components", self.panel_right)
         table_container.addWidget(lbl_results_title)
         
-        self.table_cracks = QTableWidget()
+        self.table_cracks = TableWidget(self.panel_right)
         self.table_cracks.setColumnCount(3)
         self.table_cracks.setHorizontalHeaderLabels(["Index", "Bounding Box (X1, Y1, X2, Y2)", "Size / Length Rating"])
         self.table_cracks.verticalHeader().setVisible(False)
@@ -380,25 +226,24 @@ class InspectionView(QWidget):
         results_layout.addLayout(table_container, stretch=3)
 
         # Right control summary: Reports & History Actions
-        actions_container = QVBoxLayout()
+        self.card_actions = SimpleCardWidget(self.panel_right)
+        actions_container = QVBoxLayout(self.card_actions)
         actions_container.setSpacing(10)
-        actions_container.addStretch()
+        actions_container.setContentsMargins(15, 15, 15, 15)
 
-        self.btn_export_pdf = QPushButton("📄 Export PDF Inspection Report")
-        self.btn_export_pdf.setProperty("class", "primaryBtn")
-        self.btn_export_pdf.setStyleSheet("background-color: #d4d0c8; color: #000000; border-top: 1.5px solid #ffffff; border-left: 1.5px solid #ffffff; border-right: 1.5px solid #808080; border-bottom: 1.5px solid #808080; font-weight: bold;") # Green accent
+        self.btn_export_pdf = PushButton(FIF.PRINT, "Export PDF Report", self.card_actions)
         self.btn_export_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_export_pdf.setEnabled(False)
         self.btn_export_pdf.clicked.connect(self.export_report)
         actions_container.addWidget(self.btn_export_pdf)
 
-        self.lbl_summary = QLabel("Run Status: No current inspection.")
+        self.lbl_summary = BodyLabel("Run Status: No current inspection.", self.card_actions)
         self.lbl_summary.setWordWrap(True)
-        self.lbl_summary.setStyleSheet("color: #000000; font-size: 11px;")
+        self.lbl_summary.setStyleSheet("color: #606060;")
         actions_container.addWidget(self.lbl_summary)
+        actions_container.addStretch()
         
-        results_layout.addLayout(actions_container, stretch=1)
-        
+        results_layout.addWidget(self.card_actions, stretch=1)
         right_layout.addLayout(results_layout, stretch=1)
 
         self.layout.addWidget(self.panel_right)
@@ -469,9 +314,6 @@ class InspectionView(QWidget):
         if mask_path and os.path.exists(mask_path):
             self.viewer_mask.set_image(QPixmap(mask_path))
             
-        # Re-populate detected cracks table if bounding boxes exist
-        # We don't store boxes in history JSON explicitly, but we could if we wanted to.
-        # Let's see: we can populate it if they are available, or parse from a record.
         self.table_cracks.setRowCount(0)
         self.lbl_summary.setText(f"Loaded history run: {record.get('model_used')}.\nCracks detected: {record.get('crack_count')}.")
         self.txt_status.setText(f"Loaded historical record from {record.get('timestamp')}")
@@ -531,7 +373,6 @@ class InspectionView(QWidget):
         
         # Confidence map is grayscale [0.0 - 1.0]. Convert to grayscale display
         conf_map = (results["confidence_map"] * 255).astype("uint8")
-        # Build 3D array for view
         conf_rgb = np.stack([conf_map, conf_map, conf_map], axis=-1)
         self.viewer_conf.set_ndarray_image(conf_rgb)
         
@@ -637,7 +478,6 @@ class InspectionView(QWidget):
         if row < len(boxes):
             box = boxes[row]
             # Zoom to box in visualization viewer
-            # Pad the view area slightly for context
             padding = 50
             x1 = max(0, box[0] - padding)
             y1 = max(0, box[1] - padding)

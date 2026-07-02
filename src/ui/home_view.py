@@ -1,11 +1,15 @@
 import os
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QTableWidget, QTableWidgetItem, QHeaderView, 
-    QPushButton, QAbstractItemView, QFrame
+from datetime import datetime
+from collections import defaultdict
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView
+from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt, Signal
+
+from qfluentwidgets import (
+    SimpleCardWidget, TitleLabel, SubtitleLabel, LargeTitleLabel,
+    BodyLabel, CaptionLabel, PushButton, TableWidget, FluentIcon as FIF
 )
-from PySide6.QtGui import QColor, QFont, QPixmap, QIcon
-from PySide6.QtCore import Qt, Signal, QSize
+
 from .components import InspectionChart
 
 class HomeView(QWidget):
@@ -20,148 +24,10 @@ class HomeView(QWidget):
     def __init__(self, history_manager, parent=None):
         super().__init__(parent)
         self.hm = history_manager
-        
-        # Styles
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #d4d0c8;
-                color: #000000;
-                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
-                font-size: 11px;
-            }
-            QLabel#sectionHeader {
-                font-size: 11px;
-                font-weight: bold;
-                color: #000000;
-                margin-top: 15px;
-                margin-bottom: 5px;
-            }
-            QFrame.card {
-                background-color: #d4d0c8;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-            }
-            QFrame.kpiCard {
-                background-color: #d4d0c8;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 8px;
-            }
-            QLabel.kpiVal {
-                font-size: 18px;
-                font-weight: bold;
-                color: #000080;
-            }
-            QLabel.kpiLabel {
-                font-size: 10px;
-                color: #404040;
-                text-transform: uppercase;
-                font-weight: bold;
-            }
-            QPushButton.actionCard {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 12px;
-                text-align: left;
-                font-size: 11px;
-                font-weight: bold;
-            }
-            QPushButton.actionCard:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.actionCard:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 13px;
-                padding-left: 13px;
-                padding-bottom: 11px;
-                padding-right: 11px;
-            }
-            QPushButton.actionCard QLabel {
-                background-color: transparent;
-            }
-            QTableWidget {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                border-radius: 0px;
-                gridline-color: #d4d0c8;
-                color: #000000;
-            }
-            QTableWidget::item {
-                padding: 4px;
-                border-bottom: 1px solid #d4d0c8;
-            }
-            QHeaderView::section {
-                background-color: #d4d0c8;
-                color: #000000;
-                padding: 3px;
-                border-top: 1px solid #ffffff;
-                border-left: 1px solid #ffffff;
-                border-right: 1px solid #808080;
-                border-bottom: 1px solid #808080;
-                font-weight: bold;
-                font-size: 10px;
-                text-transform: uppercase;
-            }
-            QScrollBar:vertical {
-                background-color: #d4d0c8;
-                width: 16px;
-                border: 1px solid #808080;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #d4d0c8;
-                min-height: 20px;
-                border-top: 1px solid #ffffff;
-                border-left: 1px solid #ffffff;
-                border-right: 1px solid #808080;
-                border-bottom: 1px solid #808080;
-                border-radius: 0px;
-            }
-            QPushButton.viewBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 2px 6px;
-                font-weight: bold;
-            }
-            QPushButton.viewBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.viewBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 3px;
-                padding-left: 7px;
-                padding-bottom: 1px;
-                padding-right: 5px;
-            }
-        """)
 
         # Main Layout
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setContentsMargins(24, 24, 24, 24)
         self.main_layout.setSpacing(20)
 
         # 1. Header Section
@@ -183,12 +49,9 @@ class HomeView(QWidget):
         header_layout = QVBoxLayout()
         header_layout.setSpacing(4)
         
-        title = QLabel("Dashboard")
-        title.setObjectName("dashboardTitle")
-        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #000000; font-family: 'Tahoma';")
-        
-        subtitle = QLabel("Welcome to the Roof Crack Detection & Structural Safety Hub")
-        subtitle.setStyleSheet("font-size: 10px; color: #404040; font-family: 'Tahoma';")
+        title = LargeTitleLabel("Dashboard", self)
+        subtitle = BodyLabel("Welcome to the Roof Crack Detection & Structural Safety Hub", self)
+        subtitle.setStyleSheet("color: #606060;")
         
         header_layout.addWidget(title)
         header_layout.addWidget(subtitle)
@@ -196,52 +59,41 @@ class HomeView(QWidget):
 
     def setup_kpis(self):
         self.kpi_layout = QHBoxLayout()
-        self.kpi_layout.setSpacing(15)
+        self.kpi_layout.setSpacing(16)
         
         # KPI 1: Total Inspections
-        self.card_total = QFrame()
-        self.card_total.setProperty("class", "kpiCard")
+        self.card_total = SimpleCardWidget(self)
         tot_layout = QVBoxLayout(self.card_total)
-        self.lbl_total_label = QLabel("Total Inspected")
-        self.lbl_total_label.setProperty("class", "kpiLabel")
-        self.lbl_total_val = QLabel("0")
-        self.lbl_total_val.setProperty("class", "kpiVal")
+        self.lbl_total_label = CaptionLabel("Total Inspected", self)
+        self.lbl_total_val = TitleLabel("0", self)
+        self.lbl_total_val.setStyleSheet("color: #0078d4; font-weight: bold;")
         tot_layout.addWidget(self.lbl_total_label)
         tot_layout.addWidget(self.lbl_total_val)
         
         # KPI 2: Cracks Detected
-        self.card_cracks = QFrame()
-        self.card_cracks.setProperty("class", "kpiCard")
+        self.card_cracks = SimpleCardWidget(self)
         crk_layout = QVBoxLayout(self.card_cracks)
-        self.lbl_cracks_label = QLabel("Cracks Detected")
-        self.lbl_cracks_label.setProperty("class", "kpiLabel")
-        self.lbl_cracks_val = QLabel("0 (0%)")
-        self.lbl_cracks_val.setProperty("class", "kpiVal")
-        self.lbl_cracks_val.setStyleSheet("color: #dc2626; font-size: 18px;") # red highlight
+        self.lbl_cracks_label = CaptionLabel("Cracks Detected", self)
+        self.lbl_cracks_val = TitleLabel("0 (0%)", self)
+        self.lbl_cracks_val.setStyleSheet("color: #e81123; font-weight: bold;")
         crk_layout.addWidget(self.lbl_cracks_label)
         crk_layout.addWidget(self.lbl_cracks_val)
 
         # KPI 3: Speed Avg
-        self.card_speed = QFrame()
-        self.card_speed.setProperty("class", "kpiCard")
+        self.card_speed = SimpleCardWidget(self)
         spd_layout = QVBoxLayout(self.card_speed)
-        self.lbl_speed_label = QLabel("Avg Process Time")
-        self.lbl_speed_label.setProperty("class", "kpiLabel")
-        self.lbl_speed_val = QLabel("0.00s")
-        self.lbl_speed_val.setProperty("class", "kpiVal")
-        self.lbl_speed_val.setStyleSheet("color: #16a34a; font-size: 18px;") # green highlight
+        self.lbl_speed_label = CaptionLabel("Avg Process Time", self)
+        self.lbl_speed_val = TitleLabel("0.00s", self)
+        self.lbl_speed_val.setStyleSheet("color: #107c41; font-weight: bold;")
         spd_layout.addWidget(self.lbl_speed_label)
         spd_layout.addWidget(self.lbl_speed_val)
 
         # KPI 4: Active Model
-        self.card_model = QFrame()
-        self.card_model.setProperty("class", "kpiCard")
+        self.card_model = SimpleCardWidget(self)
         mdl_layout = QVBoxLayout(self.card_model)
-        self.lbl_model_label = QLabel("Active Model Zoo")
-        self.lbl_model_label.setProperty("class", "kpiLabel")
-        self.lbl_model_val = QLabel("N/A")
-        self.lbl_model_val.setProperty("class", "kpiVal")
-        self.lbl_model_val.setStyleSheet("color: #000080; font-size: 11px; font-weight: bold; margin-top: 10px;") # Navy highlight
+        self.lbl_model_label = CaptionLabel("Active Model", self)
+        self.lbl_model_val = SubtitleLabel("N/A", self)
+        self.lbl_model_val.setStyleSheet("color: #5c2d91; font-weight: bold;")
         mdl_layout.addWidget(self.lbl_model_label)
         mdl_layout.addWidget(self.lbl_model_val)
 
@@ -253,29 +105,19 @@ class HomeView(QWidget):
         self.main_layout.addLayout(self.kpi_layout)
 
     def setup_quick_actions(self):
-        actions_header = QLabel("Quick Actions")
-        actions_header.setObjectName("sectionHeader")
-        self.main_layout.addWidget(actions_header)
-        
         actions_layout = QHBoxLayout()
-        actions_layout.setSpacing(15)
+        actions_layout.setSpacing(16)
         
         # Card 1: Single Image
-        self.btn_action_single = QPushButton("🔍 Analyze Single Image")
-        self.btn_action_single.setProperty("class", "actionCard")
-        self.btn_action_single.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_action_single = PushButton(FIF.ZOOM, "Analyze Single Image", self)
         self.btn_action_single.clicked.connect(self.navigate_to_single.emit)
         
         # Card 2: Batch
-        self.btn_action_batch = QPushButton("📁 Batch Process Folder")
-        self.btn_action_batch.setProperty("class", "actionCard")
-        self.btn_action_batch.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_action_batch = PushButton(FIF.FOLDER, "Batch Process Folder", self)
         self.btn_action_batch.clicked.connect(self.navigate_to_batch.emit)
         
         # Card 3: Settings
-        self.btn_action_settings = QPushButton("⚙️ System Settings")
-        self.btn_action_settings.setProperty("class", "actionCard")
-        self.btn_action_settings.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_action_settings = PushButton(FIF.SETTING, "System Settings", self)
         self.btn_action_settings.clicked.connect(self.navigate_to_settings.emit)
         
         actions_layout.addWidget(self.btn_action_single)
@@ -290,11 +132,10 @@ class HomeView(QWidget):
         
         # Left Panel: Recents Table
         left_panel = QVBoxLayout()
-        recents_header = QLabel("Recent Inspections")
-        recents_header.setObjectName("sectionHeader")
+        recents_header = SubtitleLabel("Recent Inspections", self)
         left_panel.addWidget(recents_header)
         
-        self.table_recent = QTableWidget()
+        self.table_recent = TableWidget(self)
         self.table_recent.setColumnCount(6)
         self.table_recent.setHorizontalHeaderLabels(["Thumbnail", "Filename", "Date", "Cracks Found", "Max Conf", "Action"])
         self.table_recent.verticalHeader().setVisible(False)
@@ -316,11 +157,10 @@ class HomeView(QWidget):
         
         # Right Panel: Analytics Chart
         right_panel = QVBoxLayout()
-        chart_header = QLabel("Trends & History")
-        chart_header.setObjectName("sectionHeader")
+        chart_header = SubtitleLabel("Trends & History", self)
         right_panel.addWidget(chart_header)
         
-        self.chart_widget = InspectionChart()
+        self.chart_widget = InspectionChart(self)
         self.chart_widget.setMinimumSize(400, 300)
         right_panel.addWidget(self.chart_widget)
         
@@ -344,16 +184,16 @@ class HomeView(QWidget):
         
         # Set KPI highlight color based on crack rate
         if cracks_detected > 0:
-            self.lbl_cracks_val.setStyleSheet("color: #dc2626; font-size: 18px; font-weight: bold;")
+            self.lbl_cracks_val.setStyleSheet("color: #e81123; font-weight: bold;")
         else:
-            self.lbl_cracks_val.setStyleSheet("color: #16a34a; font-size: 18px; font-weight: bold;")
+            self.lbl_cracks_val.setStyleSheet("color: #107c41; font-weight: bold;")
 
         avg_speed = sum(rec.get("elapsed_time", 0.0) for rec in history) / total_inspected if total_inspected > 0 else 0.0
         self.lbl_speed_val.setText(f"{avg_speed:.2f}s")
         
-        # Simple name display for active model
+        # Simple display for active model
         active_model = config.get("model_variant", "Seg_UNET_CFD_actual_v2")
-        self.lbl_model_val.setText(active_model)
+        self.lbl_model_val.setText(active_model.split("_")[0]) # Show abbreviated name to prevent overflow
         self.lbl_model_val.setToolTip(active_model)
 
         # 2. Update Trends Chart
@@ -383,10 +223,10 @@ class HomeView(QWidget):
             self.table_recent.setCellWidget(row_idx, 0, thumb_label)
             
             # Column 1: Filename
-            file_item = QTableWidgetItem(record.get("image_name", "N/A"))
-            file_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            file_item = BodyLabel(record.get("image_name", "N/A"), self.table_recent)
+            file_item.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             file_item.setToolTip(record.get("image_path", ""))
-            self.table_recent.setItem(row_idx, 1, file_item)
+            self.table_recent.setCellWidget(row_idx, 1, file_item)
             
             # Column 2: Date
             timestamp_str = record.get("timestamp", "")
@@ -397,9 +237,9 @@ class HomeView(QWidget):
                     date_display = dt.strftime("%Y-%m-%d %H:%M")
                 except Exception:
                     pass
-            date_item = QTableWidgetItem(date_display)
-            date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table_recent.setItem(row_idx, 2, date_item)
+            date_item = BodyLabel(date_display, self.table_recent)
+            date_item.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table_recent.setCellWidget(row_idx, 2, date_item)
             
             # Column 3: Cracks Found / Status
             crack_count = record.get("crack_count", 0)
@@ -409,22 +249,20 @@ class HomeView(QWidget):
             status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
             if crack_detected:
                 status_widget.setText(f"⚠️ YES ({crack_count})")
-                status_widget.setStyleSheet("color: #dc2626; font-weight: bold; background: transparent;")
+                status_widget.setStyleSheet("color: #e81123; font-weight: bold; background: transparent;")
             else:
                 status_widget.setText("✅ NONE")
-                status_widget.setStyleSheet("color: #16a34a; font-weight: bold; background: transparent;")
+                status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
             self.table_recent.setCellWidget(row_idx, 3, status_widget)
             
             # Column 4: Max Confidence
             conf = record.get("confidence", 0.0)
-            conf_item = QTableWidgetItem(f"{conf*100:.1f}%")
-            conf_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table_recent.setItem(row_idx, 4, conf_item)
+            conf_item = BodyLabel(f"{conf*100:.1f}%", self.table_recent)
+            conf_item.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table_recent.setCellWidget(row_idx, 4, conf_item)
             
             # Column 5: Action button
-            view_btn = QPushButton("Details")
-            view_btn.setProperty("class", "viewBtn")
-            view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            view_btn = PushButton("Details", self.table_recent)
             view_btn.clicked.connect(lambda checked=False, r=record: self.view_record_signal.emit(r))
             self.table_recent.setCellWidget(row_idx, 5, view_btn)
             

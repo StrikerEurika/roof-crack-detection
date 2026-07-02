@@ -52,8 +52,8 @@ Every directory in `src/` functions as an independent Python package with a dedi
 ### 2. `src.ui` (User Interface Views)
 - **Role**: Contains the MainWindow shell and distinct views corresponding to navigation panels.
 - **Key Modules**:
-  - `MainWindow`: Setups the application theme (Windows Classic Style), left navigation sidebar, and holds the view stack.
-  - `HomeView`: Main dashboard displaying overall KPI statistics, 7-day inspection trends, and a quick-action overview of the last 10 runs.
+  - `MainWindow`: Setups the application window shell and navigation sidebar using QFluentWidgets' `FluentWindow` control.
+  - `HomeView`: Main dashboard displaying overall KPI statistics, 7-day inspection trends, and a quick-action overview of the last 10 runs using Fluent components.
   - `InspectionView`: Interactive single-image detection view where a user can configure model params, view overlays, zoom/pan results, and export PDF reports.
   - `BatchView`: Configures batch queues for image directories, processes queues using worker threads, and copies outputs to custom destinations.
   - `SettingsView`: Interactive forms to override system defaults, adjust styling colors, change default paths, and clear history.
@@ -73,7 +73,8 @@ Every directory in `src/` functions as an independent Python package with a dedi
 ### 5. `src.reports` (Automated PDF Reporting)
 - **Role**: Formats results and saves them in offline document formats.
 - **Key Modules**:
-  - `PDFReportGenerator`: Compiles inspection metadata, severity recommendations, and side-by-side original/overlay images into a clean HTML template, printing it to an A4 PDF using Qt’s native print engine.
+  - `PDFReportGenerator`: Reads and interpolates values in the HTML report template and prints them to an A4 PDF using Qt’s native print engine.
+  - `report_template.html`: The HTML and CSS layout template used for constructing the final inspection report documents.
 
 ---
 
@@ -92,10 +93,9 @@ Every directory in `src/` functions as an independent Python package with a dedi
    from .analytics_view import AnalyticsView
    __all__ = [..., "AnalyticsView"]
    ```
-3. Instantiate and wire up the view inside `src/ui/mainwindow.py`:
-   - Add a navigation button in `setup_sidebar()`.
-   - Add the view class to the `QStackedWidget` in `setup_views()`.
-   - Connect the click events in `connect_signals()`.
+3. Instantiate and register the view in `src/ui/mainwindow.py`:
+   - Set unique object name in `setup_views()` (e.g., `self.page_analytics.setObjectName("analyticsView")`).
+   - Add view to sidebar in `setup_navigation()` using `self.addSubInterface(self.page_analytics, FIF.PLACEHOLDER, "Analytics")`.
 
 ### How to Optimize/Change UI Components
 - Reusable components reside inside `src/ui/components/`. If you create a new widget that is utilized in more than one view, place it there, and add it to `src/ui/components/__init__.py`.
@@ -106,4 +106,5 @@ Every directory in `src/` functions as an independent Python package with a dedi
 
 1. **Explicit Packages**: Always define an `__init__.py` in folders inside `src/`. Export public symbols using `__all__`.
 2. **Stable Imports**: Import sub-modules from the package level rather than directly from specific module filenames (e.g., use `from src.workers import InferenceWorker` instead of `from src.workers.inference_worker import InferenceWorker`). This decouples logic and enables code refactoring without breaking dependents.
-3. **Decoupled Business Logic**: Never run model inference, file writing, or heavy PDF rendering inside UI classes. Always offload these workloads to the appropriate background workers.
+3. **Fluent Design Consistency**: Use `qfluentwidgets` controls (e.g., `PushButton`, `ComboBox`, `Slider`, `SimpleCardWidget`, `BodyLabel`, `SubtitleLabel`) instead of raw PySide6 equivalents to ensure native styling, light/dark mode compliance, and standard Windows 11 animations. Do not hardcode style properties or border colors.
+4. **Decoupled Business Logic**: Never run model inference, file writing, or heavy PDF rendering inside UI classes. Always offload these workloads to the appropriate background workers.

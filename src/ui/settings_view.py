@@ -1,10 +1,11 @@
 import os
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QGroupBox, QSlider, QComboBox, QMessageBox, QFileDialog, QDialog
-)
-from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFileDialog
 from PySide6.QtCore import Qt, Signal
+
+from qfluentwidgets import (
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
+    ComboBox, Slider, PushButton, PrimaryPushButton, MessageBox, FluentIcon as FIF
+)
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility."""
@@ -15,129 +16,13 @@ class SettingsView(QWidget):
         super().__init__(parent)
         self.hm = history_manager
 
-        # Stylesheet (Consistent with dark theme)
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #d4d0c8;
-                color: #000000;
-                font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
-                font-size: 11px;
-            }
-            QGroupBox {
-                border: 2px solid;
-                border-top-color: #808080;
-                border-left-color: #808080;
-                border-right-color: #ffffff;
-                border-bottom-color: #ffffff;
-                margin-top: 15px;
-                padding-top: 15px;
-                font-weight: bold;
-                color: #000000;
-                border-radius: 0px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 3px 0 3px;
-            }
-            QLabel {
-                font-size: 11px;
-                color: #000000;
-            }
-            QComboBox, QSlider {
-                background-color: #ffffff;
-                border-top: 2px solid #808080;
-                border-left: 2px solid #808080;
-                border-right: 2px solid #ffffff;
-                border-bottom: 2px solid #ffffff;
-                border-radius: 0px;
-                padding: 3px;
-                color: #000000;
-            }
-            QPushButton.primaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 8px 12px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton.primaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.primaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 9px;
-                padding-left: 13px;
-                padding-bottom: 7px;
-                padding-right: 11px;
-            }
-            QPushButton.dangerBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 8px 12px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton.dangerBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.dangerBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 9px;
-                padding-left: 13px;
-                padding-bottom: 7px;
-                padding-right: 11px;
-            }
-            QPushButton.secondaryBtn {
-                background-color: #d4d0c8;
-                color: #000000;
-                border-top: 1.5px solid #ffffff;
-                border-left: 1.5px solid #ffffff;
-                border-right: 1.5px solid #808080;
-                border-bottom: 1.5px solid #808080;
-                border-radius: 0px;
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-            QPushButton.secondaryBtn:hover {
-                background-color: #e0ded9;
-            }
-            QPushButton.secondaryBtn:pressed {
-                border-top: 1.5px solid #808080;
-                border-left: 1.5px solid #808080;
-                border-right: 1.5px solid #ffffff;
-                border-bottom: 1.5px solid #ffffff;
-                padding-top: 7px;
-                padding-left: 13px;
-                padding-bottom: 5px;
-                padding-right: 11px;
-            }
-        """)
-
         # Main Layout
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setContentsMargins(24, 24, 24, 24)
         self.main_layout.setSpacing(20)
 
         # Title
-        title = QLabel("System Settings")
-        title.setStyleSheet("font-size: 12px; font-weight: bold; color: #000000;")
+        title = TitleLabel("System Settings", self)
         self.main_layout.addWidget(title)
 
         # 1. Model Defaults Group
@@ -156,88 +41,114 @@ class SettingsView(QWidget):
         self.load_settings()
 
     def setup_model_defaults(self):
-        group = QGroupBox("Model & Inference Defaults")
-        layout = QVBoxLayout(group)
-        layout.setSpacing(10)
+        self.group_model = SimpleCardWidget(self)
+        layout = QVBoxLayout(self.group_model)
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        title = SubtitleLabel("Model & Inference Defaults", self.group_model)
+        layout.addWidget(title)
         
         # Model variant
-        layout.addWidget(QLabel("Default Model Zoo Variant:"))
-        self.combo_model = QComboBox()
+        layout.addWidget(BodyLabel("Default Model Zoo Variant:", self.group_model))
+        self.combo_model = ComboBox(self.group_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
+        self.combo_model.setFixedWidth(350)
         layout.addWidget(self.combo_model)
 
         # Compute device
-        layout.addWidget(QLabel("Default Compute Device:"))
-        self.combo_device = QComboBox()
+        layout.addWidget(BodyLabel("Default Compute Device:", self.group_model))
+        self.combo_device = ComboBox(self.group_model)
         self.combo_device.addItems(["cuda", "cpu"])
+        self.combo_device.setFixedWidth(150)
         layout.addWidget(self.combo_device)
 
         # Confidence slider
-        self.lbl_thresh = QLabel("Default Confidence Threshold: 0.50")
+        self.lbl_thresh = BodyLabel("Default Confidence Threshold: 0.50", self.group_model)
         layout.addWidget(self.lbl_thresh)
-        self.slider_thresh = QSlider(Qt.Orientation.Horizontal)
+        
+        slider_layout = QHBoxLayout()
+        self.slider_thresh = Slider(Qt.Orientation.Horizontal, self.group_model)
         self.slider_thresh.setRange(10, 90)
         self.slider_thresh.valueChanged.connect(self.on_thresh_changed)
-        layout.addWidget(self.slider_thresh)
+        slider_layout.addWidget(self.slider_thresh)
+        slider_layout.addStretch()
+        layout.addLayout(slider_layout)
 
-        self.main_layout.addWidget(group)
+        self.main_layout.addWidget(self.group_model)
 
     def setup_visualization_styles(self):
-        group = QGroupBox("Visualization Overlay Customization")
-        layout = QVBoxLayout(group)
-        layout.setSpacing(10)
+        self.group_vis = SimpleCardWidget(self)
+        layout = QVBoxLayout(self.group_vis)
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = SubtitleLabel("Visualization Overlay Customization", self.group_vis)
+        layout.addWidget(title)
 
         # Overlay transparency
-        self.lbl_alpha = QLabel("Overlay Transparency (Alpha): 0.40")
+        self.lbl_alpha = BodyLabel("Overlay Transparency (Alpha): 0.40", self.group_vis)
         layout.addWidget(self.lbl_alpha)
-        self.slider_alpha = QSlider(Qt.Orientation.Horizontal)
+        
+        slider_layout = QHBoxLayout()
+        self.slider_alpha = Slider(Qt.Orientation.Horizontal, self.group_vis)
         self.slider_alpha.setRange(10, 90)
         self.slider_alpha.valueChanged.connect(self.on_alpha_changed)
-        layout.addWidget(self.slider_alpha)
+        slider_layout.addWidget(self.slider_alpha)
+        slider_layout.addStretch()
+        layout.addLayout(slider_layout)
 
         # Color configurations
         colors_layout = QHBoxLayout()
+        colors_layout.setSpacing(20)
         
         # 1. Overlay color
         col1 = QVBoxLayout()
-        col1.addWidget(QLabel("Overlay Color:"))
-        self.combo_color_overlay = QComboBox()
+        col1.addWidget(BodyLabel("Overlay Color:", self.group_vis))
+        self.combo_color_overlay = ComboBox(self.group_vis)
         self.combo_color_overlay.addItems(["Red", "Blue", "Green", "Yellow"])
+        self.combo_color_overlay.setFixedWidth(150)
         col1.addWidget(self.combo_color_overlay)
         colors_layout.addLayout(col1)
 
         # 2. Box color
         col2 = QVBoxLayout()
-        col2.addWidget(QLabel("Bounding Box Color:"))
-        self.combo_color_box = QComboBox()
+        col2.addWidget(BodyLabel("Bounding Box Color:", self.group_vis))
+        self.combo_color_box = ComboBox(self.group_vis)
         self.combo_color_box.addItems(["Green", "Red", "Blue", "Yellow"])
+        self.combo_color_box.setFixedWidth(150)
         col2.addWidget(self.combo_color_box)
         colors_layout.addLayout(col2)
 
         # 3. Contour color
         col3 = QVBoxLayout()
-        col3.addWidget(QLabel("Contour Outline Color:"))
-        self.combo_color_contour = QComboBox()
+        col3.addWidget(BodyLabel("Contour Outline Color:", self.group_vis))
+        self.combo_color_contour = ComboBox(self.group_vis)
         self.combo_color_contour.addItems(["Blue", "Red", "Green", "Yellow"])
+        self.combo_color_contour.setFixedWidth(150)
         col3.addWidget(self.combo_color_contour)
         colors_layout.addLayout(col3)
 
+        colors_layout.addStretch()
         layout.addLayout(colors_layout)
-        self.main_layout.addWidget(group)
+        self.main_layout.addWidget(self.group_vis)
 
     def setup_data_settings(self):
-        group = QGroupBox("Directories & History Maintenance")
-        layout = QVBoxLayout(group)
-        layout.setSpacing(12)
+        self.group_data = SimpleCardWidget(self)
+        layout = QVBoxLayout(self.group_data)
+        layout.setSpacing(16)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = SubtitleLabel("Directories & History Maintenance", self.group_data)
+        layout.addWidget(title)
 
         # Default Reports directory selection
         dir_layout = QHBoxLayout()
-        self.lbl_reports_dir = QLabel("Reports Directory: ")
+        self.lbl_reports_dir = BodyLabel("Reports Directory: ", self.group_data)
         self.lbl_reports_dir.setWordWrap(True)
         dir_layout.addWidget(self.lbl_reports_dir, stretch=4)
 
-        self.btn_select_reports = QPushButton("📁 Change...")
-        self.btn_select_reports.setProperty("class", "secondaryBtn")
+        self.btn_select_reports = PushButton(FIF.FOLDER, "Change...", self.group_data)
         self.btn_select_reports.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_select_reports.clicked.connect(self.select_reports_dir)
         dir_layout.addWidget(self.btn_select_reports, stretch=1)
@@ -245,24 +156,22 @@ class SettingsView(QWidget):
 
         # Database cleaner
         db_layout = QHBoxLayout()
-        lbl_db_info = QLabel("Delete all local inspection records and output asset cache permanently:")
+        lbl_db_info = BodyLabel("Delete all local inspection records and output asset cache permanently:", self.group_data)
         db_layout.addWidget(lbl_db_info, stretch=4)
         
-        self.btn_clear_db = QPushButton("🗑️ Clear Inspection History")
-        self.btn_clear_db.setProperty("class", "dangerBtn")
+        self.btn_clear_db = PushButton(FIF.DELETE, "Clear History", self.group_data)
         self.btn_clear_db.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_clear_db.clicked.connect(self.clear_inspection_db)
         db_layout.addWidget(self.btn_clear_db, stretch=1)
         layout.addLayout(db_layout)
 
-        self.main_layout.addWidget(group)
+        self.main_layout.addWidget(self.group_data)
 
     def setup_save_actions(self):
         actions_layout = QHBoxLayout()
         actions_layout.addStretch()
 
-        self.btn_save = QPushButton("💾 Save Configurations")
-        self.btn_save.setProperty("class", "primaryBtn")
+        self.btn_save = PrimaryPushButton("Save Configurations", self)
         self.btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_save.clicked.connect(self.save_settings)
         actions_layout.addWidget(self.btn_save)
@@ -283,19 +192,22 @@ class SettingsView(QWidget):
             self.lbl_reports_dir.setToolTip(dir_path)
 
     def clear_inspection_db(self):
-        reply = QMessageBox.question(
-            self, "Clear Inspection Database?",
+        dialog = MessageBox(
+            "Clear Inspection Database?",
             "Are you sure you want to permanently clear all inspection records and delete cached result visualizations?\n\nThis action cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            self.window()
         )
-        if reply == QMessageBox.StandardButton.Yes:
+        if dialog.exec():
             success = self.hm.clear_history()
             if success:
-                QMessageBox.information(self, "Success", "Inspection history and output cache cleared successfully.")
+                success_dialog = MessageBox("Success", "Inspection history and output cache cleared successfully.", self.window())
+                success_dialog.hideCancelButton()
+                success_dialog.exec()
                 self.settings_saved.emit() # Refresh dashboard
             else:
-                QMessageBox.warning(self, "Error", "Failed to fully clear history files.")
+                err_dialog = MessageBox("Error", "Failed to fully clear history files.", self.window())
+                err_dialog.hideCancelButton()
+                err_dialog.exec()
 
     def color_to_rgb(self, name: str) -> list:
         mapping = {
@@ -360,7 +272,11 @@ class SettingsView(QWidget):
         
         success = self.hm.save_config(new_config)
         if success:
-            QMessageBox.information(self, "Settings Saved", "System configurations have been updated successfully.")
+            success_dialog = MessageBox("Settings Saved", "System configurations have been updated successfully.", self.window())
+            success_dialog.hideCancelButton()
+            success_dialog.exec()
             self.settings_saved.emit()
         else:
-            QMessageBox.warning(self, "Error", "Failed to write settings to disk.")
+            err_dialog = MessageBox("Error", "Failed to write settings to disk.", self.window())
+            err_dialog.hideCancelButton()
+            err_dialog.exec()

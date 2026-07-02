@@ -15,19 +15,19 @@ class InspectionChart(QWidget):
         
         self.chart = QChart()
         # Theme/styling
-        self.chart.setBackgroundRoundness(0)
-        self.chart.setBackgroundBrush(QColor("#d4d0c8")) # Win32 COLOR_3DFACE
-        self.chart.setTitleBrush(QColor("#000000")) # Win32 black text
+        self.chart.setBackgroundRoundness(4)
+        self.chart.setBackgroundBrush(Qt.BrushStyle.NoBrush)
+        self.chart.setTitleBrush(QColor("#333333"))
         self.chart.setTitle("7-Day Inspection Analytics")
-        title_font = QFont("Tahoma", 9, QFont.Weight.Bold)
+        title_font = QFont("Segoe UI", 10, QFont.Weight.Bold)
         self.chart.setTitleFont(title_font)
         
         # Legend styling
         legend = self.chart.legend()
         legend.setVisible(True)
         legend.setAlignment(Qt.AlignmentFlag.AlignBottom)
-        legend.setLabelColor(QColor("#000000"))
-        legend.setFont(QFont("Tahoma", 8))
+        legend.setLabelColor(QColor("#444444"))
+        legend.setFont(QFont("Segoe UI", 8))
         
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
