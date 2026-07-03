@@ -1,52 +1,30 @@
 import os
-import time
 import numpy as np
-from PIL import Image
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem, QLabel
 )
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt, Signal, Slot, QRectF
 
 from qfluentwidgets import (
-    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel, CaptionLabel,
     ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
-    ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF
+    ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF,
+    InfoBar, InfoBarPosition
 )
 
-from src.ui.components import ImageViewer
-from src.workers import InferenceWorker
-from src.core.reports import PDFReportGenerator
-from src.core import InspectionService
+from src.view.components.image_viewer import ImageViewer
+from src.viewmodel import InspectionViewModel
 from src import check_gpu_available
 
 class InspectionView(QWidget):
-    """View widget for analyzing a single image and viewing results."""
+    """View widget for analyzing a single image and viewing results, refactored to use InspectionViewModel."""
     
-    # Model options for config
-    MODEL_VARIANTS = [
-        "Seg_UNET_CFD_actual_v2",
-        "Seg_UNET_CFD_actual_v1",
-        "Det_YOLOv26n-seg_crack-dataset_v1"
-    ]
-    PATCH_SIZES = ["256", "512", "1024"]
-    CRITICAL_AREA = 1000
-    MEDIUM_AREA = 200
-    COLOR_CRITICAL = "#f43f5e"
-    COLOR_MEDIUM = "#f59e0b"
-    COLOR_MINOR = "#10b981"
-
     inspection_completed = Signal() # Emitted when a new inspection is saved to history
 
-    def __init__(self, history_manager, model_cache, parent=None):
+    def __init__(self, view_model: InspectionViewModel, parent=None):
         super().__init__(parent)
-        self.hm = history_manager
-        self.model_cache = model_cache
-        self.active_worker = None
-        self.current_image_path = None
-        self.latest_result = None
-        self.latest_record = None
-        self.inspection_service = InspectionService(history_manager)
+        self.view_model = view_model
 
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
@@ -58,6 +36,12 @@ class InspectionView(QWidget):
 
         # 2. Right Display Panel
         self.setup_display_panel()
+
+        # Bind ViewModel Signals
+        self.connect_view_model()
+
+        # Load configurations defaults
+        self.load_settings_defaults()
 
     def setup_control_panel(self):
         self.panel_left = QWidget(self)
@@ -98,31 +82,19 @@ class InspectionView(QWidget):
         model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
         self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
-        self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
-        self.combo_model.setFixedHeight(32)
         model_layout.addWidget(self.combo_model)
         
         # Device selector
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
-        self.combo_device.setFixedHeight(32)
-        
-        has_gpu = check_gpu_available()
-
-                
-        if not has_gpu:
-            self.combo_device.setCurrentText("cpu")
-        else:
-            self.combo_device.setCurrentText(self.hm.config.get("device", "cuda"))
         model_layout.addWidget(self.combo_device)
 
         # Threshold slider
-        self.lbl_thresh = BodyLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}", self.card_model)
+        self.lbl_thresh = BodyLabel("Confidence Threshold: 0.50", self.card_model)
         model_layout.addWidget(self.lbl_thresh)
         self.slider_thresh = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_thresh.setRange(10, 90)
-        self.slider_thresh.setValue(int(self.hm.config.get("confidence_threshold", 0.5) * 100))
         self.slider_thresh.valueChanged.connect(self.on_thresh_changed)
         model_layout.addWidget(self.slider_thresh)
 
@@ -130,26 +102,21 @@ class InspectionView(QWidget):
         model_layout.addWidget(BodyLabel("Sliding Window Patch Size:", self.card_model))
         self.combo_patch = ComboBox(self.card_model)
         self.combo_patch.addItems(["256", "512", "1024"])
-        self.combo_patch.setCurrentText(str(self.hm.config.get("patch_size", 512)))
-        self.combo_patch.setFixedHeight(32)
         model_layout.addWidget(self.combo_patch)
 
         # Overlap ratio
-        self.lbl_overlap = BodyLabel(f"Patch Overlap Ratio: {self.hm.config.get('overlap_ratio', 0.2):.2f}", self.card_model)
+        self.lbl_overlap = BodyLabel("Patch Overlap Ratio: 0.20", self.card_model)
         model_layout.addWidget(self.lbl_overlap)
         self.slider_overlap = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_overlap.setRange(0, 50)
-        self.slider_overlap.setValue(int(self.hm.config.get("overlap_ratio", 0.2) * 100))
         self.slider_overlap.valueChanged.connect(self.on_overlap_changed)
         model_layout.addWidget(self.slider_overlap)
 
         # Checkboxes
         self.chk_clahe = CheckBox("Apply CLAHE Preprocessing", self.card_model)
-        self.chk_clahe.setChecked(self.hm.config.get("use_clahe", True))
         model_layout.addWidget(self.chk_clahe)
         
         self.chk_tta = CheckBox("Use Test-Time Augmentation", self.card_model)
-        self.chk_tta.setChecked(self.hm.config.get("use_tta", False))
         model_layout.addWidget(self.chk_tta)
 
         left_layout.addWidget(self.card_model)
@@ -258,6 +225,38 @@ class InspectionView(QWidget):
 
         self.layout.addWidget(self.panel_right)
 
+    def connect_view_model(self):
+        self.view_model.image_loaded.connect(self.on_image_loaded)
+        self.view_model.record_loaded.connect(self.on_record_loaded)
+        self.view_model.detection_started.connect(self.on_detection_started)
+        self.view_model.detection_progress.connect(self.on_detection_progress)
+        self.view_model.detection_finished.connect(self.on_detection_finished)
+        self.view_model.detection_error.connect(self.on_detection_error)
+        self.view_model.report_exported.connect(self.on_report_exported)
+        self.view_model.report_export_failed.connect(self.on_report_export_failed)
+
+    def load_settings_defaults(self):
+        config = self.view_model.hm.config
+        
+        self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        
+        has_gpu = check_gpu_available()
+        if not has_gpu:
+            self.combo_device.setCurrentText("cpu")
+        else:
+            self.combo_device.setCurrentText(config.get("device", "cuda"))
+
+        self.slider_thresh.setValue(int(config.get("confidence_threshold", 0.5) * 100))
+        self.lbl_thresh.setText(f"Confidence Threshold: {config.get('confidence_threshold', 0.5):.2f}")
+        
+        self.combo_patch.setCurrentText(str(config.get("patch_size", 512)))
+        
+        self.slider_overlap.setValue(int(config.get("overlap_ratio", 0.2) * 100))
+        self.lbl_overlap.setText(f"Patch Overlap Ratio: {config.get('overlap_ratio', 0.2):.2f}")
+        
+        self.chk_clahe.setChecked(config.get("use_clahe", True))
+        self.chk_tta.setChecked(config.get("use_tta", False))
+
     def on_thresh_changed(self, value):
         self.lbl_thresh.setText(f"Confidence Threshold: {value / 100:.2f}")
 
@@ -270,17 +269,17 @@ class InspectionView(QWidget):
             "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif)"
         )
         if file_path:
-            self.load_image(file_path)
+            self.view_model.load_image(file_path)
 
     def on_image_dropped(self, file_path):
-        self.load_image(file_path)
+        self.view_model.load_image(file_path)
 
-    def load_image(self, file_path):
+    @Slot(str)
+    def on_image_loaded(self, file_path):
         self.current_image_path = file_path
         self.lbl_filename.setText(os.path.basename(file_path))
         self.lbl_filename.setToolTip(file_path)
         
-        # Load and show original image in viewer
         pix = QPixmap(file_path)
         if not pix.isNull():
             self.viewer_orig.set_image(pix)
@@ -294,20 +293,17 @@ class InspectionView(QWidget):
             # Enable buttons
             self.btn_run.setEnabled(True)
             self.btn_export_pdf.setEnabled(False)
-            self.latest_result = None
-            self.latest_record = None
             self.table_cracks.setRowCount(0)
             self.lbl_summary.setText("Image loaded. Press '⚡ RUN DETECTOR' to begin analysis.")
             self.txt_status.setText(f"Loaded file: {file_path}\nReady to run detection.")
-            self.tab_widget.setCurrentIndex(0) # show visualization tab
+            self.tab_widget.setCurrentIndex(0)
 
-    def load_historical_record(self, record):
-        """Loads a historical inspection record details directly into the UI."""
+    @Slot(dict)
+    def on_record_loaded(self, record):
         self.current_image_path = record.get("image_path")
         self.lbl_filename.setText(record.get("image_name", "N/A"))
         self.lbl_filename.setToolTip(self.current_image_path)
         
-        self.latest_record = record
         self.btn_run.setEnabled(True)
         self.btn_export_pdf.setEnabled(True)
         
@@ -318,7 +314,7 @@ class InspectionView(QWidget):
         vis_path = record.get("vis_image_path")
         if vis_path and os.path.exists(vis_path):
             self.viewer_vis.set_image(QPixmap(vis_path))
-            self.viewer_overlay.set_image(QPixmap(vis_path)) # Show visualization as overlay fallback
+            self.viewer_overlay.set_image(QPixmap(vis_path))
             
         mask_path = record.get("mask_image_path")
         if mask_path and os.path.exists(mask_path):
@@ -330,159 +326,175 @@ class InspectionView(QWidget):
         self.tab_widget.setCurrentIndex(0)
 
     def run_detection(self):
-        if not self.current_image_path or not os.path.exists(self.current_image_path):
-            self.txt_status.setText("Error: Load a valid image first.")
-            return
+        pipeline_config = {
+            "model_variant": self.combo_model.currentText(),
+            "device": self.combo_device.currentText(),
+            "confidence_threshold": self.slider_thresh.value() / 100.0,
+            "patch_size": int(self.combo_patch.currentText()),
+            "overlap_ratio": self.slider_overlap.value() / 100.0,
+            "use_tta": self.chk_tta.isChecked(),
+            "use_clahe": self.chk_clahe.isChecked(),
+            "overlay_alpha": self.view_model.hm.config.get("overlay_alpha", 0.4),
+            "overlay_color": self.view_model.hm.config.get("overlay_color", [255, 0, 0]),
+            "box_color": self.view_model.hm.config.get("box_color", [0, 255, 0]),
+            "box_thickness": self.view_model.hm.config.get("box_thickness", 2),
+            "contour_color": self.view_model.hm.config.get("contour_color", [0, 0, 255]),
+            "contour_thickness": self.view_model.hm.config.get("contour_thickness", 2),
+        }
+        self.view_model.run_detection(pipeline_config)
 
-        pipeline_config = self.inspection_service.build_pipeline_config(
-            model_variant=self.combo_model.currentText(),
-            device=self.combo_device.currentText(),
-            confidence_threshold=self.slider_thresh.value() / 100.0,
-            patch_size=int(self.combo_patch.currentText()),
-            overlap_ratio=self.slider_overlap.value() / 100.0,
-            use_tta=self.chk_tta.isChecked(),
-            use_clahe=self.chk_clahe.isChecked(),
-        )
-
-        # Setup worker thread
+    @Slot()
+    def on_detection_started(self):
         self.btn_run.setEnabled(False)
         self.btn_select_file.setEnabled(False)
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0) # indeterminate spinner style
-        
-        self.active_worker = InferenceWorker(pipeline_config, self.current_image_path, self.model_cache)
-        self.active_worker.progress_signal.connect(self.on_worker_progress)
-        self.active_worker.finished_signal.connect(self.on_worker_finished)
-        self.active_worker.error_signal.connect(self.on_worker_error)
-        self.active_worker.start()
+        self.progress_bar.setRange(0, 0)
+        self.txt_status.clear()
 
     @Slot(str)
-    def on_worker_progress(self, msg):
+    def on_detection_progress(self, msg):
         self.txt_status.append(msg)
 
     @Slot(dict)
-    def on_worker_finished(self, results):
-        self.latest_result = results
+    def on_detection_finished(self, payload):
         self.btn_run.setEnabled(True)
         self.btn_select_file.setEnabled(True)
         self.progress_bar.setVisible(False)
         
-        self._update_output_tabs(results)
+        # Display images in other tabs
+        self.viewer_orig.set_ndarray_image(payload["original_image"])
+        self.viewer_vis.set_ndarray_image(payload["visualization"])
+        self.viewer_overlay.set_ndarray_image(payload["overlay"])
+        self.viewer_mask.set_ndarray_image(payload["binary_mask"])
         
-        # Use InspectionService to save outputs and add history record
-        processed = self.inspection_service.save_and_record_results(
-            results, self.current_image_path, results["model_used"]
-        )
-        self.latest_record = processed.record
-        
-        self._populate_table_from_processed(processed)
-        self._update_summary_label(results, processed.crack_count, processed.crack_detected)
-        
-        self.btn_export_pdf.setEnabled(True)
-        self.inspection_completed.emit()
-        self.tab_widget.setCurrentIndex(0) # show overlay visualization
-
-    def _update_output_tabs(self, results):
-        self.viewer_orig.set_ndarray_image(results["original_image"])
-        self.viewer_vis.set_ndarray_image(results["visualization"])
-        self.viewer_overlay.set_ndarray_image(results["overlay"])
-        self.viewer_mask.set_ndarray_image(results["binary_mask"])
-        conf_rgb = self.inspection_service.prepare_confidence_display(results["confidence_map"])
+        conf_map = (payload["confidence_map"] * 255).astype("uint8")
+        conf_rgb = np.stack([conf_map, conf_map, conf_map], axis=-1)
         self.viewer_conf.set_ndarray_image(conf_rgb)
-
-    def _populate_table_from_processed(self, processed):
+        
+        # Populate table of cracks
+        boxes = payload["bounding_boxes"]
         self.table_cracks.setRowCount(0)
-        severity_data = processed.severity_data
-        self.table_cracks.setRowCount(len(severity_data))
-        for idx, item in enumerate(severity_data):
+        self.table_cracks.setRowCount(len(boxes))
+        
+        for idx, box in enumerate(boxes):
             idx_item = QTableWidgetItem(str(idx + 1))
             idx_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 0, idx_item)
             
-            box = item["box"]
             coords = f"[{box[0]}, {box[1]}, {box[2]}, {box[3]}]"
             coords_item = QTableWidgetItem(coords)
             coords_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 1, coords_item)
             
-            area = item["area"]
-            severity = item["severity"]
-            sev_color = self.COLOR_MINOR
-            if severity == "Critical":
-                sev_color = self.COLOR_CRITICAL
-            elif severity == "Medium":
-                sev_color = self.COLOR_MEDIUM
+            w = box[2] - box[0]
+            h = box[3] - box[1]
+            area = w * h
+            severity = "Minor"
+            if area > 1000:
+                severity = "Critical"
+            elif area > 200:
+                severity = "Medium"
                 
             sev_item = QTableWidgetItem(f"{area}px ({severity})")
             sev_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            sev_item.setForeground(QColor(sev_color))
+            if severity == "Critical":
+                sev_item.setForeground(QColor("#f43f5e"))
+            elif severity == "Medium":
+                sev_item.setForeground(QColor("#f59e0b"))
+            else:
+                sev_item.setForeground(QColor("#10b981"))
             self.table_cracks.setItem(idx, 2, sev_item)
 
-    def _update_summary_label(self, results, crack_count, crack_detected):
+        # Update Summary
+        record = payload["record"]
+        crack_detected = record["crack_detected"]
+        crack_count = record["crack_count"]
         status_msg = "CRITICAL ACTION REQUIRED" if crack_detected else "ROOF SAFE / CLEAR"
         self.lbl_summary.setText(
             f"Run Status: COMPLETED\n"
             f"Result: {status_msg}\n"
             f"Crack count: {crack_count}\n"
-            f"Time elapsed: {results['elapsed_time']:.2f}s"
+            f"Time elapsed: {record['elapsed_time']:.2f}s"
         )
-
         
+        self.btn_export_pdf.setEnabled(True)
+        self.inspection_completed.emit()
+        self.tab_widget.setCurrentIndex(0)
+
     @Slot(str)
-    def on_worker_error(self, err):
+    def on_detection_error(self, err):
         self.btn_run.setEnabled(True)
         self.btn_select_file.setEnabled(True)
         self.progress_bar.setVisible(False)
         self.txt_status.append(f"Error: {err}")
         self.lbl_summary.setText(f"Run Status: FAILED\nReason: {err}")
+        
+        InfoBar.error(
+            title="Inference Error",
+            content=err,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self
+        )
 
     def on_crack_selected(self):
-        """Highlights and zooms the ImageViewer to the selected crack component."""
         selected_ranges = self.table_cracks.selectedRanges()
-        if not selected_ranges or self.latest_result is None:
+        if not selected_ranges or self.view_model.latest_result is None:
             return
             
         row = selected_ranges[0].topRow()
-        boxes = self.latest_result.get("bounding_boxes", [])
+        boxes = self.view_model.latest_result.get("bounding_boxes", [])
         if row < len(boxes):
             box = boxes[row]
-            # Zoom to box in visualization viewer
             padding = 50
             x1 = max(0, box[0] - padding)
             y1 = max(0, box[1] - padding)
             x2 = box[2] + padding
             y2 = box[3] + padding
             
-            # Switch to visualization tab first
             self.tab_widget.setCurrentIndex(0)
             self.viewer_vis.fitInView(QRectF(x1, y1, x2 - x1, y2 - y1), Qt.AspectRatioMode.KeepAspectRatio)
 
     def export_report(self):
-        if not self.latest_record:
+        if not self.view_model.latest_record:
             return
             
-        default_name = f"inspection_report_{self.latest_record['id'][:8]}.pdf"
+        default_name = f"inspection_report_{self.view_model.latest_record['id'][:8]}.pdf"
         output_pdf_path, _ = QFileDialog.getSaveFileName(
             self, "Save PDF Inspection Report",
-            os.path.join(self.hm.reports_dir, default_name),
+            os.path.join(self.view_model.get_default_reports_dir(), default_name),
             "PDF Files (*.pdf)"
         )
         
         if output_pdf_path:
             self.txt_status.append("Generating PDF report...")
-            success = PDFReportGenerator.generate_report(self.latest_record, output_pdf_path)
-            if success:
-                self.hm.update_report_path(self.latest_record["id"], output_pdf_path)
-                self.txt_status.append(f"PDF Report saved successfully at:\n{output_pdf_path}")
-                self.inspection_completed.emit()
-            else:
-                self.txt_status.append("Error: Failed to generate PDF report.")
+            self.view_model.export_report(output_pdf_path)
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        # Force a layout and geometry recalculation when switching to inspection view
-        self.layout.update()
-        self.layout.activate()
-        for child in self.findChildren(QWidget):
-            child.updateGeometry()
-            child.update()
+    @Slot(str)
+    def on_report_exported(self, path):
+        self.txt_status.append(f"PDF Report saved successfully at:\n{path}")
+        self.inspection_completed.emit()
+        InfoBar.success(
+            title="Report Saved",
+            content=f"Report PDF written successfully.",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
+
+    @Slot(str)
+    def on_report_export_failed(self, msg):
+        self.txt_status.append(f"Error: {msg}")
+        InfoBar.error(
+            title="Export Failed",
+            content=msg,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self
+        )

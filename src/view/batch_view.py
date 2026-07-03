@@ -6,30 +6,24 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, Signal, Slot
 
 from qfluentwidgets import (
-    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel, CaptionLabel,
     ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
-    ProgressBar, TextEdit, TableWidget, FluentIcon as FIF
+    ProgressBar, TextEdit, TableWidget, FluentIcon as FIF,
+    InfoBar, InfoBarPosition
 )
 
-from src.workers import BatchWorker
-from src.core import BatchService
+from src.viewmodel import BatchViewModel
 from src import check_gpu_available
 
 class BatchView(QWidget):
-    """View widget for folder-level batch roof crack detection."""
+    """View widget for folder-level batch roof crack detection, refactored to use BatchViewModel."""
     
     batch_completed = Signal() # Emitted when batch finishes and history is updated
 
-    def __init__(self, history_manager, model_cache, parent=None):
+    def __init__(self, view_model: BatchViewModel, parent=None):
         super().__init__(parent)
-        self.hm = history_manager
-        self.model_cache = model_cache
-        self.batch_service = BatchService(history_manager)
+        self.view_model = view_model
 
-        self.active_worker = None
-        self.input_dir = None
-        self.output_dir = None
-        
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(24, 24, 24, 24)
@@ -40,6 +34,12 @@ class BatchView(QWidget):
 
         # 2. Right Display Panel
         self.setup_queue_panel()
+
+        # Bind ViewModel signals
+        self.connect_view_model()
+
+        # Load configurations defaults
+        self.load_settings_defaults()
 
     def setup_control_panel(self):
         self.panel_left = QWidget(self)
@@ -89,38 +89,25 @@ class BatchView(QWidget):
         model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
         self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
-        self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
-        self.combo_model.setFixedHeight(32)
         model_layout.addWidget(self.combo_model)
         
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
-        self.combo_device.setFixedHeight(32)
-        
-        has_gpu = check_gpu_available()
-                
-        if not has_gpu:
-            self.combo_device.setCurrentText("cpu")
-        else:
-            self.combo_device.setCurrentText(self.hm.config.get("device", "cuda"))
         model_layout.addWidget(self.combo_device)
 
         # Threshold slider
-        self.lbl_thresh = BodyLabel(f"Confidence Threshold: {self.hm.config.get('confidence_threshold', 0.5):.2f}", self.card_model)
+        self.lbl_thresh = BodyLabel("Confidence Threshold: 0.50", self.card_model)
         model_layout.addWidget(self.lbl_thresh)
         self.slider_thresh = Slider(Qt.Orientation.Horizontal, self.card_model)
         self.slider_thresh.setRange(10, 90)
-        self.slider_thresh.setValue(int(self.hm.config.get("confidence_threshold", 0.5) * 100))
         self.slider_thresh.valueChanged.connect(self.on_thresh_changed)
         model_layout.addWidget(self.slider_thresh)
 
         self.chk_clahe = CheckBox("Apply CLAHE Preprocessing", self.card_model)
-        self.chk_clahe.setChecked(self.hm.config.get("use_clahe", True))
         model_layout.addWidget(self.chk_clahe)
         
         self.chk_tta = CheckBox("Use Test-Time Augmentation", self.card_model)
-        self.chk_tta.setChecked(self.hm.config.get("use_tta", False))
         model_layout.addWidget(self.chk_tta)
 
         left_layout.addWidget(self.card_model)
@@ -185,89 +172,106 @@ class BatchView(QWidget):
 
         self.layout.addWidget(self.panel_right)
 
+    def connect_view_model(self):
+        self.view_model.input_dir_changed.connect(self.on_input_dir_changed)
+        self.view_model.output_dir_changed.connect(self.on_output_dir_changed)
+        self.view_model.batch_started.connect(self.on_batch_started)
+        self.view_model.batch_progress.connect(self.on_batch_progress)
+        self.view_model.file_completed.connect(self.on_file_completed)
+        self.view_model.batch_finished.connect(self.on_batch_finished)
+        self.view_model.batch_error.connect(self.on_batch_error)
+        self.view_model.batch_cancelled.connect(self.on_batch_cancelled)
+
+    def load_settings_defaults(self):
+        config = self.view_model.hm.config
+        
+        self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        
+        has_gpu = check_gpu_available()
+        if not has_gpu:
+            self.combo_device.setCurrentText("cpu")
+        else:
+            self.combo_device.setCurrentText(config.get("device", "cuda"))
+
+        self.slider_thresh.setValue(int(config.get("confidence_threshold", 0.5) * 100))
+        self.lbl_thresh.setText(f"Confidence Threshold: {config.get('confidence_threshold', 0.5):.2f}")
+        
+        self.chk_clahe.setChecked(config.get("use_clahe", True))
+        self.chk_tta.setChecked(config.get("use_tta", False))
+
     def on_thresh_changed(self, value):
         self.lbl_thresh.setText(f"Confidence Threshold: {value / 100:.2f}")
 
     def select_input_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Input Folder of Roof Images")
         if dir_path:
-            self.input_dir = dir_path
-            self.lbl_input_dir.setText(dir_path)
-            self.lbl_input_dir.setToolTip(dir_path)
-            
-            # Default output folder: input_folder_results
-            if not self.output_dir:
-                self.output_dir = os.path.join(dir_path, "results")
-                self.lbl_output_dir.setText(self.output_dir)
-                self.lbl_output_dir.setToolTip(self.output_dir)
-                
-            self.check_ready_state()
+            self.view_model.set_input_dir(dir_path)
 
     def select_output_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Output Folder for Results")
         if dir_path:
-            self.output_dir = dir_path
-            self.lbl_output_dir.setText(dir_path)
-            self.lbl_output_dir.setToolTip(dir_path)
-            self.check_ready_state()
+            self.view_model.set_output_dir(dir_path)
+
+    @Slot(str)
+    def on_input_dir_changed(self, path):
+        self.lbl_input_dir.setText(path)
+        self.lbl_input_dir.setToolTip(path)
+        self.check_ready_state()
+
+    @Slot(str)
+    def on_output_dir_changed(self, path):
+        self.lbl_output_dir.setText(path)
+        self.lbl_output_dir.setToolTip(path)
+        self.check_ready_state()
 
     def check_ready_state(self):
-        if self.input_dir and self.output_dir:
+        if self.view_model.input_dir and self.view_model.output_dir:
             self.btn_start.setEnabled(True)
             self.txt_log.setText("Ready to start batch. Configured directories correctly.")
         else:
             self.btn_start.setEnabled(False)
 
     def start_batch(self):
-        if not self.input_dir or not self.output_dir:
-            return
+        pipeline_config = {
+            "model_variant": self.combo_model.currentText(),
+            "device": self.combo_device.currentText(),
+            "confidence_threshold": self.slider_thresh.value() / 100.0,
+            "patch_size": int(self.view_model.hm.config.get("patch_size", 512)),
+            "overlap_ratio": float(self.view_model.hm.config.get("overlap_ratio", 0.2)),
+            "use_tta": self.chk_tta.isChecked(),
+            "use_clahe": self.chk_clahe.isChecked(),
+            "overlay_alpha": self.view_model.hm.config.get("overlay_alpha", 0.4),
+            "overlay_color": self.view_model.hm.config.get("overlay_color", [255, 0, 0]),
+            "box_color": self.view_model.hm.config.get("box_color", [0, 255, 0]),
+            "box_thickness": self.view_model.hm.config.get("box_thickness", 2),
+            "contour_color": self.view_model.hm.config.get("contour_color", [0, 0, 255]),
+            "contour_thickness": self.view_model.hm.config.get("contour_thickness", 2),
+        }
+        self.view_model.start_batch(pipeline_config)
 
-        pipeline_config = self.batch_service.build_pipeline_config(
-            model_variant=self.combo_model.currentText(),
-            device=self.combo_device.currentText(),
-            confidence_threshold=self.slider_thresh.value() / 100.0,
-            patch_size=int(self.hm.config.get("patch_size", 512)),
-            overlap_ratio=float(self.hm.config.get("overlap_ratio", 0.2)),
-            use_tta=self.chk_tta.isChecked(),
-            use_clahe=self.chk_clahe.isChecked(),
-        )
+    def cancel_batch(self):
+        self.view_model.cancel_batch()
 
-        # Clear UI components
+    @Slot()
+    def on_batch_started(self):
         self.table_queue.setRowCount(0)
         self.txt_log.clear()
         self.progress_bar.setValue(0)
         
-        # Toggle buttons
         self.btn_start.setEnabled(False)
         self.btn_cancel.setEnabled(True)
         self.btn_select_input.setEnabled(False)
         self.btn_select_output.setEnabled(False)
-
-        # Start background thread
-        self.active_worker = BatchWorker(pipeline_config, self.input_dir, self.output_dir, self.model_cache)
-        self.active_worker.started_signal.connect(self.on_batch_started)
-        self.active_worker.progress_signal.connect(self.on_batch_progress)
-        self.active_worker.file_completed_signal.connect(self.on_file_completed)
-        self.active_worker.finished_signal.connect(self.on_batch_finished)
-        self.active_worker.error_signal.connect(self.on_batch_error)
-        self.active_worker.cancelled_signal.connect(self.on_batch_cancelled)
-        self.active_worker.start()
-
-    def cancel_batch(self):
-        if self.active_worker:
-            self.txt_log.append("Cancellation requested. Stopping thread...")
-            self.active_worker.cancel()
-            self.btn_cancel.setEnabled(False)
-
-    @Slot()
-    def on_batch_started(self):
         self.txt_log.append("Batch process starting...")
 
     @Slot(int, int, str)
     def on_batch_progress(self, current, total, msg):
-        self.progress_bar.setMaximum(total)
-        self.progress_bar.setValue(current)
-        self.txt_log.append(msg)
+        if total != -1:
+            self.progress_bar.setMaximum(total)
+        if current != -1:
+            self.progress_bar.setValue(current)
+        if msg:
+            self.txt_log.append(msg)
 
     @Slot(dict)
     def on_file_completed(self, result):
@@ -283,7 +287,6 @@ class BatchView(QWidget):
         fn_item.setToolTip(result["image_path"])
         self.table_queue.setItem(row_idx, 1, fn_item)
 
-        # If file failed with exception
         if "error" in result:
             self.table_queue.setItem(row_idx, 2, QTableWidgetItem("N/A"))
             self.table_queue.setItem(row_idx, 3, QTableWidgetItem("0"))
@@ -293,7 +296,6 @@ class BatchView(QWidget):
             self.table_queue.setItem(row_idx, 5, status_item)
             return
 
-        # Crack detected
         crack_detected = result["crack_detected"]
         crack_count = result["crack_count"]
         max_conf = result["max_confidence"]
@@ -308,26 +310,13 @@ class BatchView(QWidget):
             status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
         self.table_queue.setCellWidget(row_idx, 2, status_widget)
 
-        # Crack count
         self.table_queue.setItem(row_idx, 3, QTableWidgetItem(str(crack_count)))
-
-        # Max conf
         self.table_queue.setItem(row_idx, 4, QTableWidgetItem(f"{max_conf*100:.1f}%"))
 
-        # Status
         status_item = QTableWidgetItem("DONE")
-        status_item.setForeground(QColor("#10b981"))
+        status_item.setForeground(QColor("#107c41"))
         self.table_queue.setItem(row_idx, 5, status_item)
 
-        # Save result assets to history using BatchService
-        try:
-            self.batch_service.save_and_record_file_result(
-                result, self.output_dir, self.combo_model.currentText()
-            )
-        except Exception as e:
-            self.txt_log.append(f"Warning: Failed to save result copies: {e}")
-
-        # Scroll to bottom of table
         self.table_queue.scrollToBottom()
 
     @Slot(list)
@@ -343,32 +332,51 @@ class BatchView(QWidget):
             
         self.cleanup_batch_run()
         self.batch_completed.emit()
+        
+        InfoBar.success(
+            title="Batch Processing Complete",
+            content=f"Successfully processed {total} images.",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
 
     @Slot(str)
     def on_batch_error(self, err):
         self.txt_log.append(f"\nCRITICAL ERROR: {err}")
         self.cleanup_batch_run()
+        
+        InfoBar.error(
+            title="Batch Error",
+            content=err,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self
+        )
 
     @Slot()
     def on_batch_cancelled(self):
         self.txt_log.append("\nBatch execution was cancelled by user.")
         self.cleanup_batch_run()
         self.batch_completed.emit()
+        
+        InfoBar.warning(
+            title="Batch Cancelled",
+            content="Execution stopped by user.",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
 
     def cleanup_batch_run(self):
-        self.active_worker = None
         self.btn_start.setEnabled(True)
         self.btn_cancel.setEnabled(False)
         self.btn_select_input.setEnabled(True)
         self.btn_select_output.setEnabled(True)
-        # Update progress bar fully
         self.progress_bar.setValue(self.progress_bar.maximum())
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        # Force a layout and geometry recalculation when switching to batch view
-        self.layout.update()
-        self.layout.activate()
-        for child in self.findChildren(QWidget):
-            child.updateGeometry()
-            child.update()

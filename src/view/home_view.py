@@ -1,31 +1,29 @@
 import os
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt, Signal
+from datetime import datetime
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView, QTableWidgetItem
+from PySide6.QtGui import QPixmap, QColor
+from PySide6.QtCore import Qt, Signal, Slot
 
 from qfluentwidgets import (
     SimpleCardWidget, TitleLabel, SubtitleLabel, LargeTitleLabel,
     BodyLabel, CaptionLabel, PushButton, TableWidget, FluentIcon as FIF
 )
 
-from src.ui.components import InspectionChart
-from src.core import DashboardService
-
+from src.view.components.custom_chart import InspectionChart
+from src.viewmodel.home_view_model import HomeViewModel
 
 class HomeView(QWidget):
-    """The landing homepage dashboard of the crack inspection desktop application."""
+    """The landing homepage dashboard of the crack inspection desktop application, refactored using MVVM."""
     
     # Navigation signals
     navigate_to_single = Signal()
     navigate_to_batch = Signal()
     navigate_to_settings = Signal()
-    view_record_signal = Signal(dict)  # Signal to view details of a specific historical record
+    view_record_signal = Signal(dict)
 
-    def __init__(self, history_manager, parent=None):
+    def __init__(self, view_model: HomeViewModel, parent=None):
         super().__init__(parent)
-        self.hm = history_manager
-        self.dashboard_service = DashboardService(history_manager)
-
+        self.view_model = view_model
 
         # Main Layout
         self.main_layout = QVBoxLayout(self)
@@ -43,6 +41,9 @@ class HomeView(QWidget):
 
         # 4. Content Area (Splits into Recent Table and Chart)
         self.setup_content_area()
+
+        # Bind ViewModel Signals
+        self.connect_view_model()
 
         # Load initial data
         self.refresh_dashboard()
@@ -132,7 +133,7 @@ class HomeView(QWidget):
         body_layout = QHBoxLayout()
         body_layout.setSpacing(20)
         
-        # Left Panel: Recents Table
+        # Left Panel: Recent Table
         left_panel = QVBoxLayout()
         recents_header = SubtitleLabel("Recent Inspections", self)
         left_panel.addWidget(recents_header)
@@ -171,40 +172,48 @@ class HomeView(QWidget):
         
         self.main_layout.addLayout(body_layout)
 
+    def connect_view_model(self):
+        self.view_model.dashboard_refreshed.connect(self.on_dashboard_refreshed)
+
     def refresh_dashboard(self):
-        """Loads data from the HistoryManager and updates KPIs, Table, and Chart via DashboardService."""
-        kpis = self.dashboard_service.compute_kpis()
-        
+        self.view_model.refresh_dashboard()
+
+    @Slot(dict)
+    def on_dashboard_refreshed(self, stats):
+        total_inspected = stats["total_inspected"]
+        cracks_detected = stats["cracks_detected"]
+        crack_rate = stats["crack_rate"]
+        avg_speed = stats["avg_speed"]
+        active_model = stats["active_model"]
+        recent_records = stats["recent_records"]
+        history = stats["full_history"]
+
         # 1. Update KPIs
-        self.lbl_total_val.setText(str(kpis.total_inspected))
-        self.lbl_cracks_val.setText(f"{kpis.cracks_detected} ({kpis.crack_rate:.1f}%)")
+        self.lbl_total_val.setText(str(total_inspected))
+        self.lbl_cracks_val.setText(f"{cracks_detected} ({crack_rate:.1f}%)")
         
-        # Set KPI highlight color based on crack rate
-        if kpis.cracks_detected > 0:
+        if cracks_detected > 0:
             self.lbl_cracks_val.setStyleSheet("color: #e81123; font-weight: bold;")
         else:
             self.lbl_cracks_val.setStyleSheet("color: #107c41; font-weight: bold;")
 
-        self.lbl_speed_val.setText(f"{kpis.avg_speed:.2f}s")
-        
-        self.lbl_model_val.setText(kpis.active_model_abbr)
-        self.lbl_model_val.setToolTip(kpis.active_model)
+        self.lbl_speed_val.setText(f"{avg_speed:.2f}s")
+        self.lbl_model_val.setText(active_model.split("_")[0])
+        self.lbl_model_val.setToolTip(active_model)
 
         # 2. Update Trends Chart
-        self.chart_widget.update_data(self.hm.history)
+        self.chart_widget.update_data(history)
 
-        # 3. Update Recents Table
+        # 3. Update Table
         self.table_recent.setRowCount(0)
-        recent_records = self.dashboard_service.get_recent_records(10)
         self.table_recent.setRowCount(len(recent_records))
         
         for row_idx, record in enumerate(recent_records):
-            # Column 0: Thumbnail preview
+            # Thumbnail preview
             thumb_label = QLabel()
             thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             thumb_label.setStyleSheet("border: none; background: transparent; padding: 2px;")
             
-            # Load thumbnail (using processed overlay if available, else original image)
             img_path = record.get("vis_image_path")
             if not img_path or not os.path.exists(img_path):
                 img_path = record.get("image_path")
@@ -216,20 +225,26 @@ class HomeView(QWidget):
                     thumb_label.setPixmap(scaled_pix)
             self.table_recent.setCellWidget(row_idx, 0, thumb_label)
             
-            # Column 1: Filename
+            # Filename
             file_item = BodyLabel(record.get("image_name", "N/A"), self.table_recent)
             file_item.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             file_item.setToolTip(record.get("image_path", ""))
             self.table_recent.setCellWidget(row_idx, 1, file_item)
             
-            # Column 2: Date
+            # Date
             timestamp_str = record.get("timestamp", "")
-            date_display = self.dashboard_service.format_timestamp(timestamp_str)
+            date_display = "N/A"
+            if timestamp_str:
+                try:
+                    dt = datetime.fromisoformat(timestamp_str)
+                    date_display = dt.strftime("%Y-%m-%d %H:%M")
+                except Exception:
+                    pass
             date_item = BodyLabel(date_display, self.table_recent)
             date_item.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_recent.setCellWidget(row_idx, 2, date_item)
             
-            # Column 3: Cracks Found / Status
+            # Cracks Found / Status
             crack_count = record.get("crack_count", 0)
             crack_detected = record.get("crack_detected", False)
             
@@ -243,13 +258,13 @@ class HomeView(QWidget):
                 status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
             self.table_recent.setCellWidget(row_idx, 3, status_widget)
             
-            # Column 4: Max Confidence
+            # Max Confidence
             conf = record.get("confidence", 0.0)
             conf_item = BodyLabel(f"{conf*100:.1f}%", self.table_recent)
             conf_item.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_recent.setCellWidget(row_idx, 4, conf_item)
             
-            # Column 5: Action button
+            # Action button
             view_btn = PushButton("Details", self.table_recent)
             view_btn.clicked.connect(lambda checked=False, r=record: self.view_record_signal.emit(r))
             self.table_recent.setCellWidget(row_idx, 5, view_btn)

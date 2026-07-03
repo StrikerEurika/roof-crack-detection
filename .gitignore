@@ -41,7 +41,7 @@ videos/
 checkpoint
 checkpoints/
 weights/
-models/
+# models/
 saved_models/
 
 # Training Logs, Metrics, and Visualizations
