@@ -1,11 +1,10 @@
 import os
-import time
 import numpy as np
-from PIL import Image
 from PySide6.QtCore import QObject, Signal, Slot
 from src.workers.inference_worker import InferenceWorker
 from src.reports.pdf_generator import PDFReportGenerator
-from src.controllers.history_manager import HistoryManager
+from src.model import HistoryManager
+from src.services import InspectionService
 
 class InspectionViewModel(QObject):
     """ViewModel managing single image inspection operations, state, and reports."""
@@ -23,6 +22,7 @@ class InspectionViewModel(QObject):
         super().__init__(parent)
         self.hm = history_manager
         self.model_cache = model_cache
+        self.inspection_service = InspectionService(history_manager)
         self.active_worker = None
         self.current_image_path = None
         self.latest_result = None
@@ -66,51 +66,25 @@ class InspectionViewModel(QObject):
         """Handles completion of the inference, saves result assets, and updates history database."""
         self.latest_result = results
         
-        # Save output images to assets/results folder
-        image_name = os.path.basename(self.current_image_path)
-        base_name, _ = os.path.splitext(image_name)
-        timestamp_slug = int(time.time())
-        
-        vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-        mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-        
-        vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-        mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-        
         try:
-            Image.fromarray(results["visualization"]).save(vis_output_path)
-            Image.fromarray(results["binary_mask"]).save(mask_output_path)
+            processed = self.inspection_service.save_and_record_results(
+                results, self.current_image_path, results["model_used"]
+            )
+            self.latest_record = processed.record
+
+            output_payload = {
+                "record": self.latest_record,
+                "original_image": results["original_image"],
+                "visualization": results["visualization"],
+                "overlay": results["overlay"],
+                "binary_mask": results["binary_mask"],
+                "confidence_map": results["confidence_map"],
+                "bounding_boxes": results["bounding_boxes"]
+            }
+            
+            self.detection_finished.emit(output_payload)
         except Exception as e:
-            self.detection_progress.emit(f"Warning: Failed to save result assets to disk: {e}")
-
-        # Update history database
-        crack_count = len(results["bounding_boxes"])
-        crack_detected = crack_count > 0
-        max_conf = float(results["confidence_map"].max()) if results["confidence_map"].size > 0 else 0.0
-        
-        # Create record in HistoryManager
-        self.latest_record = self.hm.add_record(
-            image_path=self.current_image_path,
-            crack_detected=crack_detected,
-            confidence=max_conf,
-            crack_count=crack_count,
-            model_used=results["model_used"],
-            vis_image_path=vis_output_path,
-            mask_image_path=mask_output_path,
-            elapsed_time=results["elapsed_time"]
-        )
-
-        output_payload = {
-            "record": self.latest_record,
-            "original_image": results["original_image"],
-            "visualization": results["visualization"],
-            "overlay": results["overlay"],
-            "binary_mask": results["binary_mask"],
-            "confidence_map": results["confidence_map"],
-            "bounding_boxes": results["bounding_boxes"]
-        }
-        
-        self.detection_finished.emit(output_payload)
+            self.detection_error.emit(f"Failed to process and record inspection results: {str(e)}")
 
     @Slot(str)
     def _on_inference_error(self, err):

@@ -3,10 +3,11 @@ from PySide6.QtCore import Slot
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
 
-from .views import HomeView, InspectionView, BatchView, SettingsView
+from src.viewmodel import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
+from src.view import HomeView, InspectionView, BatchView, SettingsView
 
-class MainWindow(FluentWindow):
-    """The main desktop application window managing navigation and view switches via QFluentWidgets."""
+class MainWindowView(FluentWindow):
+    """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
 
     def __init__(self, history_manager, parent=None):
         super().__init__(parent)
@@ -19,7 +20,7 @@ class MainWindow(FluentWindow):
         self.resize(1280, 800)
         self.setMinimumSize(1024, 700)
 
-        # 1. Setup Central Views
+        # 1. Setup Central Views and ViewModels
         self.setup_views()
 
         # 2. Setup Navigation Sidebar
@@ -32,11 +33,17 @@ class MainWindow(FluentWindow):
         self.switchTo(self.page_home)
 
     def setup_views(self):
+        # Initialize the ViewModels
+        self.home_vm = HomeViewModel(self.hm)
+        self.inspection_vm = InspectionViewModel(self.hm, self.model_cache)
+        self.batch_vm = BatchViewModel(self.hm, self.model_cache)
+        self.settings_vm = SettingsViewModel(self.hm)
+
         # Initialize the views
-        self.page_home = HomeView(self.hm)
-        self.page_single = InspectionView(self.hm, self.model_cache)
-        self.page_batch = BatchView(self.hm, self.model_cache)
-        self.page_settings = SettingsView(self.hm)
+        self.page_home = HomeView(self.home_vm, self)
+        self.page_single = InspectionView(self.inspection_vm, self)
+        self.page_batch = BatchView(self.batch_vm, self)
+        self.page_settings = SettingsView(self.settings_vm, self)
 
         # Set object names (crucial for QFluentWidgets navigation routing)
         self.page_home.setObjectName("homeView")
@@ -72,6 +79,14 @@ class MainWindow(FluentWindow):
         self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
         self.page_settings.settings_saved.connect(self.on_settings_saved)
 
+        # Auto-refresh when current tab switches back to dashboard page
+        self.stackedWidget.currentChanged.connect(self.on_current_changed)
+
+    def on_current_changed(self, index):
+        widget = self.stackedWidget.widget(index)
+        if widget == self.page_home:
+            self.page_home.refresh_dashboard()
+
     @Slot(dict)
     def on_view_historical_record(self, record):
         """Triggered from history list to load results and view details."""
@@ -83,20 +98,9 @@ class MainWindow(FluentWindow):
         """Updates configurations across all tabs when settings are saved."""
         self.page_home.refresh_dashboard()
         
-        # Sync values in single/batch settings
-        config = self.hm.config
-        
-        # Single Inspection defaults sync
-        self.page_single.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
-        self.page_single.combo_device.setCurrentText(config.get("device", "cuda"))
-        self.page_single.slider_thresh.setValue(int(config.get("confidence_threshold", 0.5) * 100))
-        self.page_single.slider_overlap.setValue(int(config.get("overlap_ratio", 0.2) * 100))
-        self.page_single.combo_patch.setCurrentText(str(config.get("patch_size", 512)))
-        
-        # Batch View defaults sync
-        self.page_batch.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
-        self.page_batch.combo_device.setCurrentText(config.get("device", "cuda"))
-        self.page_batch.slider_thresh.setValue(int(config.get("confidence_threshold", 0.5) * 100))
+        # Force default settings reload on the views
+        self.page_single.load_settings_defaults()
+        self.page_batch.load_settings_defaults()
         
         # If default settings changed, clear model cache to force reload on next runs
         self.model_cache.clear()

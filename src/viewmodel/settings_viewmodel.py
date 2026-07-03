@@ -1,5 +1,6 @@
-from PySide6.QtCore import QObject, Signal, Slot
-from src.controllers.history_manager import HistoryManager
+from PySide6.QtCore import QObject, Signal
+from src.model import HistoryManager
+from src.services import SettingsService
 
 class SettingsViewModel(QObject):
     """ViewModel for handling application settings and database maintenance."""
@@ -12,6 +13,7 @@ class SettingsViewModel(QObject):
     def __init__(self, history_manager: HistoryManager, parent=None):
         super().__init__(parent)
         self.hm = history_manager
+        self.settings_service = SettingsService(history_manager)
 
     def load_settings(self):
         """Loads default and custom settings from HistoryManager."""
@@ -48,4 +50,12 @@ class SettingsViewModel(QObject):
 
     def get_default_reports_dir(self) -> str:
         """Returns the current reports directory path."""
-        return self.hm.config.get("default_reports_dir", self.hm.reports_dir)
+        return self.settings_service.hm.config.get("default_reports_dir", self.hm.reports_dir)
+
+    def color_to_rgb(self, name: str) -> list:
+        """Helper to convert color name to RGB array."""
+        return self.settings_service.color_to_rgb(name)
+
+    def rgb_to_color_name(self, rgb: list) -> str:
+        """Helper to convert RGB array to color name."""
+        return self.settings_service.rgb_to_color_name(rgb)

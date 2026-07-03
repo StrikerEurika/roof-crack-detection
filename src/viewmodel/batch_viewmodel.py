@@ -1,9 +1,8 @@
 import os
-import time
-from PIL import Image
 from PySide6.QtCore import QObject, Signal, Slot
 from src.workers.batch_worker import BatchWorker
-from src.controllers.history_manager import HistoryManager
+from src.model import HistoryManager
+from src.services import BatchService
 
 class BatchViewModel(QObject):
     """ViewModel managing folder-level batch processing execution and states."""
@@ -21,6 +20,7 @@ class BatchViewModel(QObject):
         super().__init__(parent)
         self.hm = history_manager
         self.model_cache = model_cache
+        self.batch_service = BatchService(history_manager)
         self.active_worker = None
         self.input_dir = None
         self.output_dir = None
@@ -72,56 +72,22 @@ class BatchViewModel(QObject):
     @Slot(dict)
     def _on_file_completed(self, result):
         """Handles completion of a single file in batch. Saves copies and adds history record."""
-        filename = result["filename"]
-        
-        # If it failed during worker execution
         if "error" in result:
             self.file_completed.emit(result)
             return
 
-        # Save result assets to the app's global assets folder so it is visible in Recents history!
         results_obj = result.get("results_object")
-        crack_detected = result["crack_detected"]
-        crack_count = result["crack_count"]
-        max_conf = result["max_confidence"]
+        model_used = config_model_used(results_obj)
         
-        if results_obj:
-            base_name, _ = os.path.splitext(filename)
-            timestamp_slug = int(time.time())
-            
-            vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-            mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-            
-            vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-            mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-            
-            try:
-                # Save to app global assets results
-                Image.fromarray(results_obj["visualization"]).save(vis_output_path)
-                Image.fromarray(results_obj["binary_mask"]).save(mask_output_path)
-                
-                # Save also to user configured batch output directory
-                user_vis_path = os.path.join(self.output_dir, f"{base_name}_overlay.png")
-                user_mask_path = os.path.join(self.output_dir, f"{base_name}_mask.png")
-                Image.fromarray(results_obj["visualization"]).save(user_vis_path)
-                Image.fromarray(results_obj["binary_mask"]).save(user_mask_path)
-                
-                # Add historical entry in database
-                self.hm.add_record(
-                    image_path=result["image_path"],
-                    crack_detected=crack_detected,
-                    confidence=max_conf,
-                    crack_count=crack_count,
-                    model_used=config_model_used(results_obj), # fall back to result model
-                    vis_image_path=vis_output_path,
-                    mask_image_path=mask_output_path,
-                    elapsed_time=result["elapsed_time"]
-                )
-            except Exception as e:
-                # Append error or emit progress warning
-                self.batch_progress.emit(-1, -1, f"Warning: Failed to save result copies for {filename}: {e}")
-        
-        self.file_completed.emit(result)
+        try:
+            # Delegate to BatchService to save assets and log history record
+            updated_result = self.batch_service.save_and_record_file_result(
+                result, self.output_dir, model_used
+            )
+            self.file_completed.emit(updated_result)
+        except Exception as e:
+            self.batch_progress.emit(-1, -1, f"Warning: Failed to save result copies for {result.get('filename', 'N/A')}: {e}")
+            self.file_completed.emit(result)
 
     @Slot(list)
     def _on_batch_finished(self, summary_list):
@@ -140,4 +106,6 @@ class BatchViewModel(QObject):
 
 def config_model_used(results_obj) -> str:
     """Helper to extract model_used safely."""
-    return results_obj.get("model_used", "Seg_UNET_CFD_actual_v2")
+    if results_obj:
+        return results_obj.get("model_used", "Seg_UNET_CFD_actual_v2")
+    return "Seg_UNET_CFD_actual_v2"
