@@ -24,6 +24,7 @@ class HomeView(QWidget):
     def __init__(self, view_model: HomeViewModel, parent=None):
         super().__init__(parent)
         self.view_model = view_model
+        self.thumbnail_cache = {}
 
         # Main Layout
         self.main_layout = QVBoxLayout(self)
@@ -219,10 +220,14 @@ class HomeView(QWidget):
                 img_path = record.get("image_path")
                 
             if img_path and os.path.exists(img_path):
-                pix = QPixmap(img_path)
-                if not pix.isNull():
-                    scaled_pix = pix.scaled(64, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    thumb_label.setPixmap(scaled_pix)
+                if img_path in self.thumbnail_cache:
+                    thumb_label.setPixmap(self.thumbnail_cache[img_path])
+                else:
+                    pix = QPixmap(img_path)
+                    if not pix.isNull():
+                        scaled_pix = pix.scaled(64, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                        self.thumbnail_cache[img_path] = scaled_pix
+                        thumb_label.setPixmap(scaled_pix)
             self.table_recent.setCellWidget(row_idx, 0, thumb_label)
             
             # Filename

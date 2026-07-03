@@ -1,10 +1,15 @@
-import os
+_gpu_available_cache = None
 
 def check_gpu_available() -> bool:
     """Checks if CUDA GPU acceleration is available via ONNX Runtime or PyTorch."""
+    global _gpu_available_cache
+    if _gpu_available_cache is not None:
+        return _gpu_available_cache
+
     try:
         import onnxruntime as ort
         if any("CUDA" in p for p in ort.get_available_providers()):
+            _gpu_available_cache = True
             return True
     except Exception:
         pass
@@ -12,10 +17,12 @@ def check_gpu_available() -> bool:
     try:
         import torch
         if torch.cuda.is_available():
+            _gpu_available_cache = True
             return True
     except Exception:
         pass
         
+    _gpu_available_cache = False
     return False
 
 def get_inference_pipeline(config: dict, model_cache: dict = None):
