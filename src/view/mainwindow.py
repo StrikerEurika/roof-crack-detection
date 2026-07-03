@@ -133,17 +133,18 @@ class MainWindow(FluentWindow):
                 importlib.reload(src.view.home_view)
                 
                 is_current = (self.stackedWidget.currentWidget() == self.page_home)
-                index = self.stackedWidget.indexOf(self.page_home)
                 
-                # Re-instantiate
-                new_page = src.view.home_view.HomeView(self.home_vm, self)
-                new_page.setObjectName("homeView")
+                # Block signals to prevent intermediate routing errors
+                self.stackedWidget.blockSignals(True)
+                self.stackedWidget.view.blockSignals(True)
                 
-                # Replace in StackedWidget
+                # Replace in StackedWidget using addWidget to sync PopUpAniInfo correctly
                 self.stackedWidget.removeWidget(self.page_home)
                 self.page_home.deleteLater()
+                new_page = src.view.home_view.HomeView(self.home_vm, self)
+                new_page.setObjectName("homeView")
+                self.stackedWidget.addWidget(new_page)
                 self.page_home = new_page
-                self.stackedWidget.view.insertWidget(index, self.page_home)
                 
                 # Reconnect home signals
                 self.page_home.navigate_to_single.connect(lambda: self.switchTo(self.page_single))
@@ -158,6 +159,10 @@ class MainWindow(FluentWindow):
                     nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
                     nav_item.clicked.connect(lambda: self.switchTo(self.page_home))
                 
+                # Unblock signals
+                self.stackedWidget.blockSignals(False)
+                self.stackedWidget.view.blockSignals(False)
+                
                 if is_current:
                     self.switchTo(self.page_home)
                     self.page_home.refresh_dashboard()
@@ -168,15 +173,16 @@ class MainWindow(FluentWindow):
                 importlib.reload(src.view.inspection_view)
                 
                 is_current = (self.stackedWidget.currentWidget() == self.page_single)
-                index = self.stackedWidget.indexOf(self.page_single)
                 
-                new_page = src.view.inspection_view.InspectionView(self.inspection_vm, self)
-                new_page.setObjectName("inspectionView")
+                self.stackedWidget.blockSignals(True)
+                self.stackedWidget.view.blockSignals(True)
                 
                 self.stackedWidget.removeWidget(self.page_single)
                 self.page_single.deleteLater()
+                new_page = src.view.inspection_view.InspectionView(self.inspection_vm, self)
+                new_page.setObjectName("inspectionView")
+                self.stackedWidget.addWidget(new_page)
                 self.page_single = new_page
-                self.stackedWidget.view.insertWidget(index, self.page_single)
                 
                 # Reconnect signals
                 self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
@@ -188,6 +194,9 @@ class MainWindow(FluentWindow):
                     nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
                     nav_item.clicked.connect(lambda: self.switchTo(self.page_single))
                 
+                self.stackedWidget.blockSignals(False)
+                self.stackedWidget.view.blockSignals(False)
+                
                 if is_current:
                     self.switchTo(self.page_single)
                 print("✨ InspectionView reloaded in-place successfully!")
@@ -197,15 +206,16 @@ class MainWindow(FluentWindow):
                 importlib.reload(src.view.batch_view)
                 
                 is_current = (self.stackedWidget.currentWidget() == self.page_batch)
-                index = self.stackedWidget.indexOf(self.page_batch)
                 
-                new_page = src.view.batch_view.BatchView(self.batch_vm, self)
-                new_page.setObjectName("batchView")
+                self.stackedWidget.blockSignals(True)
+                self.stackedWidget.view.blockSignals(True)
                 
                 self.stackedWidget.removeWidget(self.page_batch)
                 self.page_batch.deleteLater()
+                new_page = src.view.batch_view.BatchView(self.batch_vm, self)
+                new_page.setObjectName("batchView")
+                self.stackedWidget.addWidget(new_page)
                 self.page_batch = new_page
-                self.stackedWidget.view.insertWidget(index, self.page_batch)
                 
                 # Reconnect signals
                 self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
@@ -217,6 +227,9 @@ class MainWindow(FluentWindow):
                     nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
                     nav_item.clicked.connect(lambda: self.switchTo(self.page_batch))
                 
+                self.stackedWidget.blockSignals(False)
+                self.stackedWidget.view.blockSignals(False)
+                
                 if is_current:
                     self.switchTo(self.page_batch)
                 print("✨ BatchView reloaded in-place successfully!")
@@ -226,15 +239,16 @@ class MainWindow(FluentWindow):
                 importlib.reload(src.view.settings_view)
                 
                 is_current = (self.stackedWidget.currentWidget() == self.page_settings)
-                index = self.stackedWidget.indexOf(self.page_settings)
                 
-                new_page = src.view.settings_view.SettingsView(self.settings_vm, self)
-                new_page.setObjectName("settingsView")
+                self.stackedWidget.blockSignals(True)
+                self.stackedWidget.view.blockSignals(True)
                 
                 self.stackedWidget.removeWidget(self.page_settings)
                 self.page_settings.deleteLater()
+                new_page = src.view.settings_view.SettingsView(self.settings_vm, self)
+                new_page.setObjectName("settingsView")
+                self.stackedWidget.addWidget(new_page)
                 self.page_settings = new_page
-                self.stackedWidget.view.insertWidget(index, self.page_settings)
                 
                 # Reconnect signals
                 self.page_settings.settings_saved.connect(self.on_settings_saved)
@@ -245,6 +259,9 @@ class MainWindow(FluentWindow):
                     nav_item.clicked.disconnect()
                     nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
                     nav_item.clicked.connect(lambda: self.switchTo(self.page_settings))
+                
+                self.stackedWidget.blockSignals(False)
+                self.stackedWidget.view.blockSignals(False)
                 
                 if is_current:
                     self.switchTo(self.page_settings)
