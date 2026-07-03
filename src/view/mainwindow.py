@@ -143,7 +143,7 @@ class MainWindow(FluentWindow):
                 self.stackedWidget.removeWidget(self.page_home)
                 self.page_home.deleteLater()
                 self.page_home = new_page
-                self.stackedWidget.insertWidget(index, self.page_home)
+                self.stackedWidget.view.insertWidget(index, self.page_home)
                 
                 # Reconnect home signals
                 self.page_home.navigate_to_single.connect(lambda: self.switchTo(self.page_single))
@@ -176,7 +176,7 @@ class MainWindow(FluentWindow):
                 self.stackedWidget.removeWidget(self.page_single)
                 self.page_single.deleteLater()
                 self.page_single = new_page
-                self.stackedWidget.insertWidget(index, self.page_single)
+                self.stackedWidget.view.insertWidget(index, self.page_single)
                 
                 # Reconnect signals
                 self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
@@ -205,7 +205,7 @@ class MainWindow(FluentWindow):
                 self.stackedWidget.removeWidget(self.page_batch)
                 self.page_batch.deleteLater()
                 self.page_batch = new_page
-                self.stackedWidget.insertWidget(index, self.page_batch)
+                self.stackedWidget.view.insertWidget(index, self.page_batch)
                 
                 # Reconnect signals
                 self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
@@ -234,7 +234,7 @@ class MainWindow(FluentWindow):
                 self.stackedWidget.removeWidget(self.page_settings)
                 self.page_settings.deleteLater()
                 self.page_settings = new_page
-                self.stackedWidget.insertWidget(index, self.page_settings)
+                self.stackedWidget.view.insertWidget(index, self.page_settings)
                 
                 # Reconnect signals
                 self.page_settings.settings_saved.connect(self.on_settings_saved)
