@@ -5,10 +5,10 @@ from PySide6.QtCore import Qt, Signal, Slot
 from qfluentwidgets import (
     SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
     ComboBox, Slider, PushButton, PrimaryPushButton, MessageBox, FluentIcon as FIF,
-    InfoBar, InfoBarPosition
+    InfoBar, InfoBarPosition, SingleDirectionScrollArea
 )
 
-from src.viewmodel import SettingsViewModel
+from src.view_model import SettingsViewModel
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility via SettingsViewModel."""
@@ -24,9 +24,23 @@ class SettingsView(QWidget):
         self.main_layout.setContentsMargins(24, 24, 24, 24)
         self.main_layout.setSpacing(20)
 
-        # Title
+        # Title (Fixed at the top)
         title = TitleLabel("System Settings", self)
         self.main_layout.addWidget(title)
+
+        # Scroll Area for settings content
+        self.scroll_area = SingleDirectionScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        self.scroll_container = QWidget()
+        self.scroll_container.setStyleSheet("QWidget { background: transparent; }")
+        self.scroll_layout = QVBoxLayout(self.scroll_container)
+        self.scroll_layout.setContentsMargins(0, 0, 24, 0)
+        self.scroll_layout.setSpacing(16)
+        
+        self.scroll_area.setWidget(self.scroll_container)
+        self.main_layout.addWidget(self.scroll_area)
 
         # 1. Model Defaults Group
         self.setup_model_defaults()
@@ -81,7 +95,7 @@ class SettingsView(QWidget):
         slider_layout.addStretch()
         layout.addLayout(slider_layout)
 
-        self.main_layout.addWidget(self.group_model)
+        self.scroll_layout.addWidget(self.group_model)
 
     def setup_visualization_styles(self):
         self.group_vis = SimpleCardWidget(self)
@@ -137,7 +151,7 @@ class SettingsView(QWidget):
 
         colors_layout.addStretch()
         layout.addLayout(colors_layout)
-        self.main_layout.addWidget(self.group_vis)
+        self.scroll_layout.addWidget(self.group_vis)
 
     def setup_data_settings(self):
         self.group_data = SimpleCardWidget(self)
@@ -171,7 +185,7 @@ class SettingsView(QWidget):
         db_layout.addWidget(self.btn_clear_db, stretch=1)
         layout.addLayout(db_layout)
 
-        self.main_layout.addWidget(self.group_data)
+        self.scroll_layout.addWidget(self.group_data)
 
     def setup_save_actions(self):
         actions_layout = QHBoxLayout()
@@ -182,8 +196,8 @@ class SettingsView(QWidget):
         self.btn_save.clicked.connect(self.save_settings)
         actions_layout.addWidget(self.btn_save)
 
-        self.main_layout.addLayout(actions_layout)
-        self.main_layout.addStretch()
+        self.scroll_layout.addLayout(actions_layout)
+        self.scroll_layout.addStretch()
 
     def connect_view_model(self):
         self.view_model.settings_loaded.connect(self.on_settings_loaded)

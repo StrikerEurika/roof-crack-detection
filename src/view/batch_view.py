@@ -12,7 +12,7 @@ from qfluentwidgets import (
     InfoBar, InfoBarPosition
 )
 
-from src.viewmodel import BatchViewModel
+from src.view_model import BatchViewModel
 from src import check_gpu_available
 
 class BatchView(QWidget):
