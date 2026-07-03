@@ -1,4 +1,6 @@
-from PySide6.QtCore import Slot
+import os
+import importlib
+from PySide6.QtCore import Slot, QFileSystemWatcher
 
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
@@ -31,6 +33,9 @@ class MainWindow(FluentWindow):
 
         # Select Home Tab by default
         self.switchTo(self.page_home)
+
+        # 4. Setup Hot-Reload Watcher for Views
+        self.setup_hot_reload()
 
     def setup_views(self):
         # Initialize the ViewModels
@@ -104,3 +109,149 @@ class MainWindow(FluentWindow):
         
         # If default settings changed, clear model cache to force reload on next runs
         self.model_cache.clear()
+
+    def setup_hot_reload(self):
+        """Sets up the filesystem watcher for all View files."""
+        self.watcher = QFileSystemWatcher(self)
+        view_dir = os.path.dirname(os.path.abspath(__file__))
+        views_to_watch = ["home_view.py", "inspection_view.py", "batch_view.py", "settings_view.py"]
+        for view_file in views_to_watch:
+            path = os.path.join(view_dir, view_file)
+            if os.path.exists(path):
+                self.watcher.addPath(path)
+        self.watcher.fileChanged.connect(self.hot_reload_view)
+
+    def hot_reload_view(self, file_path):
+        """Dynamic in-place swap of modified views, preserving ViewModel state."""
+        filename = os.path.basename(file_path)
+        print(f"🔥 Hot-reloading view because of modification in: {filename}")
+        
+        try:
+            if filename == "home_view.py":
+                # Reload module
+                import src.view.home_view
+                importlib.reload(src.view.home_view)
+                
+                is_current = (self.stackedWidget.currentWidget() == self.page_home)
+                index = self.stackedWidget.indexOf(self.page_home)
+                
+                # Re-instantiate
+                new_page = src.view.home_view.HomeView(self.home_vm, self)
+                new_page.setObjectName("homeView")
+                
+                # Replace in StackedWidget
+                self.stackedWidget.removeWidget(self.page_home)
+                self.page_home.deleteLater()
+                self.page_home = new_page
+                self.stackedWidget.insertWidget(index, self.page_home)
+                
+                # Reconnect home signals
+                self.page_home.navigate_to_single.connect(lambda: self.switchTo(self.page_single))
+                self.page_home.navigate_to_batch.connect(lambda: self.switchTo(self.page_batch))
+                self.page_home.navigate_to_settings.connect(lambda: self.switchTo(self.page_settings))
+                self.page_home.view_record_signal.connect(self.on_view_historical_record)
+                
+                # Update QFluentWidgets sidebar navigation onClick callback
+                nav_item = self.navigationInterface.widget("homeView")
+                if nav_item:
+                    nav_item.clicked.disconnect()
+                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+                    nav_item.clicked.connect(lambda: self.switchTo(self.page_home))
+                
+                if is_current:
+                    self.switchTo(self.page_home)
+                    self.page_home.refresh_dashboard()
+                print("✨ HomeView reloaded in-place successfully!")
+
+            elif filename == "inspection_view.py":
+                import src.view.inspection_view
+                importlib.reload(src.view.inspection_view)
+                
+                is_current = (self.stackedWidget.currentWidget() == self.page_single)
+                index = self.stackedWidget.indexOf(self.page_single)
+                
+                new_page = src.view.inspection_view.InspectionView(self.inspection_vm, self)
+                new_page.setObjectName("inspectionView")
+                
+                self.stackedWidget.removeWidget(self.page_single)
+                self.page_single.deleteLater()
+                self.page_single = new_page
+                self.stackedWidget.insertWidget(index, self.page_single)
+                
+                # Reconnect signals
+                self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
+                
+                # Update QFluentWidgets sidebar navigation onClick callback
+                nav_item = self.navigationInterface.widget("inspectionView")
+                if nav_item:
+                    nav_item.clicked.disconnect()
+                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+                    nav_item.clicked.connect(lambda: self.switchTo(self.page_single))
+                
+                if is_current:
+                    self.switchTo(self.page_single)
+                print("✨ InspectionView reloaded in-place successfully!")
+
+            elif filename == "batch_view.py":
+                import src.view.batch_view
+                importlib.reload(src.view.batch_view)
+                
+                is_current = (self.stackedWidget.currentWidget() == self.page_batch)
+                index = self.stackedWidget.indexOf(self.page_batch)
+                
+                new_page = src.view.batch_view.BatchView(self.batch_vm, self)
+                new_page.setObjectName("batchView")
+                
+                self.stackedWidget.removeWidget(self.page_batch)
+                self.page_batch.deleteLater()
+                self.page_batch = new_page
+                self.stackedWidget.insertWidget(index, self.page_batch)
+                
+                # Reconnect signals
+                self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
+                
+                # Update QFluentWidgets sidebar navigation onClick callback
+                nav_item = self.navigationInterface.widget("batchView")
+                if nav_item:
+                    nav_item.clicked.disconnect()
+                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+                    nav_item.clicked.connect(lambda: self.switchTo(self.page_batch))
+                
+                if is_current:
+                    self.switchTo(self.page_batch)
+                print("✨ BatchView reloaded in-place successfully!")
+
+            elif filename == "settings_view.py":
+                import src.view.settings_view
+                importlib.reload(src.view.settings_view)
+                
+                is_current = (self.stackedWidget.currentWidget() == self.page_settings)
+                index = self.stackedWidget.indexOf(self.page_settings)
+                
+                new_page = src.view.settings_view.SettingsView(self.settings_vm, self)
+                new_page.setObjectName("settingsView")
+                
+                self.stackedWidget.removeWidget(self.page_settings)
+                self.page_settings.deleteLater()
+                self.page_settings = new_page
+                self.stackedWidget.insertWidget(index, self.page_settings)
+                
+                # Reconnect signals
+                self.page_settings.settings_saved.connect(self.on_settings_saved)
+                
+                # Update QFluentWidgets sidebar navigation onClick callback
+                nav_item = self.navigationInterface.widget("settingsView")
+                if nav_item:
+                    nav_item.clicked.disconnect()
+                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+                    nav_item.clicked.connect(lambda: self.switchTo(self.page_settings))
+                
+                if is_current:
+                    self.switchTo(self.page_settings)
+                print("✨ SettingsView reloaded in-place successfully!")
+
+        except Exception as e:
+            print(f"❌ Failed to hot-reload view {filename}: {e}")
+            
+        # Re-add watched path (some editors recreate files on save)
+        self.watcher.addPath(file_path)
