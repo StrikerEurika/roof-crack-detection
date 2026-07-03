@@ -14,13 +14,28 @@ from qfluentwidgets import (
     ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF
 )
 
-from .components import ImageViewer
+from src.ui.components import ImageViewer
 from src.workers import InferenceWorker
-from src.reports import PDFReportGenerator
+from src.core.reports import PDFReportGenerator
+from src.core import InspectionService
+from src import check_gpu_available
 
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results."""
     
+    # Model options for config
+    MODEL_VARIANTS = [
+        "Seg_UNET_CFD_actual_v2",
+        "Seg_UNET_CFD_actual_v1",
+        "Det_YOLOv26n-seg_crack-dataset_v1"
+    ]
+    PATCH_SIZES = ["256", "512", "1024"]
+    CRITICAL_AREA = 1000
+    MEDIUM_AREA = 200
+    COLOR_CRITICAL = "#f43f5e"
+    COLOR_MEDIUM = "#f59e0b"
+    COLOR_MINOR = "#10b981"
+
     inspection_completed = Signal() # Emitted when a new inspection is saved to history
 
     def __init__(self, history_manager, model_cache, parent=None):
@@ -31,6 +46,7 @@ class InspectionView(QWidget):
         self.current_image_path = None
         self.latest_result = None
         self.latest_record = None
+        self.inspection_service = InspectionService(history_manager)
 
         # Main horizontal layout
         self.layout = QHBoxLayout(self)
@@ -83,24 +99,17 @@ class InspectionView(QWidget):
         self.combo_model = ComboBox(self.card_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
         self.combo_model.setCurrentText(self.hm.config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setFixedHeight(32)
         model_layout.addWidget(self.combo_model)
         
         # Device selector
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
         self.combo_device = ComboBox(self.card_model)
         self.combo_device.addItems(["cuda", "cpu"])
+        self.combo_device.setFixedHeight(32)
         
-        # Check GPU availability dynamically
-        has_gpu = False
-        try:
-            import onnxruntime as ort
-            has_gpu = any("CUDA" in p for p in ort.get_available_providers())
-        except ImportError:
-            try:
-                import torch
-                has_gpu = torch.cuda.is_available()
-            except ImportError:
-                pass
+        has_gpu = check_gpu_available()
+
                 
         if not has_gpu:
             self.combo_device.setCurrentText("cpu")
@@ -122,6 +131,7 @@ class InspectionView(QWidget):
         self.combo_patch = ComboBox(self.card_model)
         self.combo_patch.addItems(["256", "512", "1024"])
         self.combo_patch.setCurrentText(str(self.hm.config.get("patch_size", 512)))
+        self.combo_patch.setFixedHeight(32)
         model_layout.addWidget(self.combo_patch)
 
         # Overlap ratio
@@ -324,23 +334,15 @@ class InspectionView(QWidget):
             self.txt_status.setText("Error: Load a valid image first.")
             return
 
-        # Prepare config
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.combo_patch.currentText()),
-            "overlap_ratio": self.slider_overlap.value() / 100.0,
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "clahe_clip_limit": 2.0,
-            "overlay_alpha": self.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.hm.config.get("box_thickness", 2),
-            "contour_color": self.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.hm.config.get("contour_thickness", 2)
-        }
+        pipeline_config = self.inspection_service.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            patch_size=int(self.combo_patch.currentText()),
+            overlap_ratio=self.slider_overlap.value() / 100.0,
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
 
         # Setup worker thread
         self.btn_run.setEnabled(False)
@@ -365,88 +367,58 @@ class InspectionView(QWidget):
         self.btn_select_file.setEnabled(True)
         self.progress_bar.setVisible(False)
         
-        # Display images in other tabs
+        self._update_output_tabs(results)
+        
+        # Use InspectionService to save outputs and add history record
+        processed = self.inspection_service.save_and_record_results(
+            results, self.current_image_path, results["model_used"]
+        )
+        self.latest_record = processed.record
+        
+        self._populate_table_from_processed(processed)
+        self._update_summary_label(results, processed.crack_count, processed.crack_detected)
+        
+        self.btn_export_pdf.setEnabled(True)
+        self.inspection_completed.emit()
+        self.tab_widget.setCurrentIndex(0) # show overlay visualization
+
+    def _update_output_tabs(self, results):
         self.viewer_orig.set_ndarray_image(results["original_image"])
         self.viewer_vis.set_ndarray_image(results["visualization"])
         self.viewer_overlay.set_ndarray_image(results["overlay"])
         self.viewer_mask.set_ndarray_image(results["binary_mask"])
-        
-        # Confidence map is grayscale [0.0 - 1.0]. Convert to grayscale display
-        conf_map = (results["confidence_map"] * 255).astype("uint8")
-        conf_rgb = np.stack([conf_map, conf_map, conf_map], axis=-1)
+        conf_rgb = self.inspection_service.prepare_confidence_display(results["confidence_map"])
         self.viewer_conf.set_ndarray_image(conf_rgb)
-        
-        # Save output images to assets/results folder
-        image_name = os.path.basename(self.current_image_path)
-        base_name, _ = os.path.splitext(image_name)
-        timestamp_slug = int(time.time())
-        
-        vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-        mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
-        
-        vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
-        mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
-        
-        try:
-            Image.fromarray(results["visualization"]).save(vis_output_path)
-            Image.fromarray(results["binary_mask"]).save(mask_output_path)
-        except Exception as e:
-            self.txt_status.append(f"Warning: Failed to save result assets: {e}")
 
-        # Update History database
-        crack_count = len(results["bounding_boxes"])
-        crack_detected = crack_count > 0
-        max_conf = float(results["confidence_map"].max()) if results["confidence_map"].size > 0 else 0.0
-        
-        self.latest_record = self.hm.add_record(
-            image_path=self.current_image_path,
-            crack_detected=crack_detected,
-            confidence=max_conf,
-            crack_count=crack_count,
-            model_used=results["model_used"],
-            vis_image_path=vis_output_path,
-            mask_image_path=mask_output_path,
-            elapsed_time=results["elapsed_time"]
-        )
-        
-        # Populate table of cracks
+    def _populate_table_from_processed(self, processed):
         self.table_cracks.setRowCount(0)
-        self.table_cracks.setRowCount(len(results["bounding_boxes"]))
-        
-        for idx, box in enumerate(results["bounding_boxes"]):
-            # Index
+        severity_data = processed.severity_data
+        self.table_cracks.setRowCount(len(severity_data))
+        for idx, item in enumerate(severity_data):
             idx_item = QTableWidgetItem(str(idx + 1))
             idx_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 0, idx_item)
             
-            # Bounding box coords
+            box = item["box"]
             coords = f"[{box[0]}, {box[1]}, {box[2]}, {box[3]}]"
             coords_item = QTableWidgetItem(coords)
             coords_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_cracks.setItem(idx, 1, coords_item)
             
-            # Estimated Area/Severity
-            w = box[2] - box[0]
-            h = box[3] - box[1]
-            area = w * h
-            severity = "Minor"
-            if area > 1000:
-                severity = "Critical"
-            elif area > 200:
-                severity = "Medium"
+            area = item["area"]
+            severity = item["severity"]
+            sev_color = self.COLOR_MINOR
+            if severity == "Critical":
+                sev_color = self.COLOR_CRITICAL
+            elif severity == "Medium":
+                sev_color = self.COLOR_MEDIUM
                 
             sev_item = QTableWidgetItem(f"{area}px ({severity})")
             sev_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            # Style severity column
-            if severity == "Critical":
-                sev_item.setForeground(QColor("#f43f5e"))
-            elif severity == "Medium":
-                sev_item.setForeground(QColor("#f59e0b"))
-            else:
-                sev_item.setForeground(QColor("#10b981"))
+            sev_item.setForeground(QColor(sev_color))
             self.table_cracks.setItem(idx, 2, sev_item)
 
-        # Update Summary
+    def _update_summary_label(self, results, crack_count, crack_detected):
         status_msg = "CRITICAL ACTION REQUIRED" if crack_detected else "ROOF SAFE / CLEAR"
         self.lbl_summary.setText(
             f"Run Status: COMPLETED\n"
@@ -454,10 +426,7 @@ class InspectionView(QWidget):
             f"Crack count: {crack_count}\n"
             f"Time elapsed: {results['elapsed_time']:.2f}s"
         )
-        
-        self.btn_export_pdf.setEnabled(True)
-        self.inspection_completed.emit()
-        self.tab_widget.setCurrentIndex(0) # show overlay visualization
+
         
     @Slot(str)
     def on_worker_error(self, err):
@@ -508,3 +477,12 @@ class InspectionView(QWidget):
                 self.inspection_completed.emit()
             else:
                 self.txt_status.append("Error: Failed to generate PDF report.")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force a layout and geometry recalculation when switching to inspection view
+        self.layout.update()
+        self.layout.activate()
+        for child in self.findChildren(QWidget):
+            child.updateGeometry()
+            child.update()

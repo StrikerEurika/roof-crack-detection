@@ -1,6 +1,4 @@
 import os
-from datetime import datetime
-from collections import defaultdict
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt, Signal
@@ -10,7 +8,9 @@ from qfluentwidgets import (
     BodyLabel, CaptionLabel, PushButton, TableWidget, FluentIcon as FIF
 )
 
-from .components import InspectionChart
+from src.ui.components import InspectionChart
+from src.core import DashboardService
+
 
 class HomeView(QWidget):
     """The landing homepage dashboard of the crack inspection desktop application."""
@@ -24,6 +24,8 @@ class HomeView(QWidget):
     def __init__(self, history_manager, parent=None):
         super().__init__(parent)
         self.hm = history_manager
+        self.dashboard_service = DashboardService(history_manager)
+
 
         # Main Layout
         self.main_layout = QVBoxLayout(self)
@@ -170,38 +172,30 @@ class HomeView(QWidget):
         self.main_layout.addLayout(body_layout)
 
     def refresh_dashboard(self):
-        """Loads data from the HistoryManager and updates KPIs, Table, and Chart."""
-        history = self.hm.history
-        config = self.hm.config
+        """Loads data from the HistoryManager and updates KPIs, Table, and Chart via DashboardService."""
+        kpis = self.dashboard_service.compute_kpis()
         
         # 1. Update KPIs
-        total_inspected = len(history)
-        self.lbl_total_val.setText(str(total_inspected))
-        
-        cracks_detected = sum(1 for rec in history if rec.get("crack_detected", False))
-        crack_rate = (cracks_detected / total_inspected * 100) if total_inspected > 0 else 0
-        self.lbl_cracks_val.setText(f"{cracks_detected} ({crack_rate:.1f}%)")
+        self.lbl_total_val.setText(str(kpis.total_inspected))
+        self.lbl_cracks_val.setText(f"{kpis.cracks_detected} ({kpis.crack_rate:.1f}%)")
         
         # Set KPI highlight color based on crack rate
-        if cracks_detected > 0:
+        if kpis.cracks_detected > 0:
             self.lbl_cracks_val.setStyleSheet("color: #e81123; font-weight: bold;")
         else:
             self.lbl_cracks_val.setStyleSheet("color: #107c41; font-weight: bold;")
 
-        avg_speed = sum(rec.get("elapsed_time", 0.0) for rec in history) / total_inspected if total_inspected > 0 else 0.0
-        self.lbl_speed_val.setText(f"{avg_speed:.2f}s")
+        self.lbl_speed_val.setText(f"{kpis.avg_speed:.2f}s")
         
-        # Simple display for active model
-        active_model = config.get("model_variant", "Seg_UNET_CFD_actual_v2")
-        self.lbl_model_val.setText(active_model.split("_")[0]) # Show abbreviated name to prevent overflow
-        self.lbl_model_val.setToolTip(active_model)
+        self.lbl_model_val.setText(kpis.active_model_abbr)
+        self.lbl_model_val.setToolTip(kpis.active_model)
 
         # 2. Update Trends Chart
-        self.chart_widget.update_data(history)
+        self.chart_widget.update_data(self.hm.history)
 
         # 3. Update Recents Table
         self.table_recent.setRowCount(0)
-        recent_records = history[:10] # Show top 10
+        recent_records = self.dashboard_service.get_recent_records(10)
         self.table_recent.setRowCount(len(recent_records))
         
         for row_idx, record in enumerate(recent_records):
@@ -230,13 +224,7 @@ class HomeView(QWidget):
             
             # Column 2: Date
             timestamp_str = record.get("timestamp", "")
-            date_display = "N/A"
-            if timestamp_str:
-                try:
-                    dt = datetime.fromisoformat(timestamp_str)
-                    date_display = dt.strftime("%Y-%m-%d %H:%M")
-                except Exception:
-                    pass
+            date_display = self.dashboard_service.format_timestamp(timestamp_str)
             date_item = BodyLabel(date_display, self.table_recent)
             date_item.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_recent.setCellWidget(row_idx, 2, date_item)

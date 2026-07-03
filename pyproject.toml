@@ -10,3 +10,6 @@ dependencies = [
     "pyside6>=6.11.1",
     "pyside6-fluent-widgets>=1.11.2",
 ]
+
+[tool.uv.sources]
+findcrack = { path = "../findcrack", editable = true }

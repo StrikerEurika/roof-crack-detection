@@ -6,3 +6,7 @@ background processing workers, and PDF reporting.
 """
 
 __version__ = "1.0.0"
+
+from .utils import check_gpu_available, get_inference_pipeline
+
+__all__ = ["check_gpu_available", "get_inference_pipeline"]

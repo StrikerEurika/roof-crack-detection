@@ -4,8 +4,10 @@ from PySide6.QtCore import Qt, Signal
 
 from qfluentwidgets import (
     SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel,
-    ComboBox, Slider, PushButton, PrimaryPushButton, MessageBox, FluentIcon as FIF
+    ComboBox, Slider, PushButton, PrimaryPushButton, MessageBox, ScrollArea, FluentIcon as FIF
 )
+
+from src.core import SettingsService
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility."""
@@ -15,14 +17,31 @@ class SettingsView(QWidget):
     def __init__(self, history_manager, parent=None):
         super().__init__(parent)
         self.hm = history_manager
+        self.settings_service = SettingsService(history_manager)
 
-        # Main Layout
-        self.main_layout = QVBoxLayout(self)
+        # Outer layout of SettingsView
+        self.outer_layout = QVBoxLayout(self)
+        self.outer_layout.setContentsMargins(0, 0, 0, 0)
+        self.outer_layout.setSpacing(0)
+
+        # Scroll Area for scrollable settings page
+        self.scroll_area = ScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setStyleSheet("border: none; background: transparent;")
+
+        # Content widget that actually contains the settings cards
+        self.scroll_content = QWidget()
+        self.scroll_content.setObjectName("scrollContent")
+        self.scroll_content.setStyleSheet("background: transparent;")
+
+        # Main Layout for the content widget
+        self.main_layout = QVBoxLayout(self.scroll_content)
         self.main_layout.setContentsMargins(24, 24, 24, 24)
         self.main_layout.setSpacing(20)
 
         # Title
-        title = TitleLabel("System Settings", self)
+        title = TitleLabel("System Settings", self.scroll_content)
         self.main_layout.addWidget(title)
 
         # 1. Model Defaults Group
@@ -37,11 +56,15 @@ class SettingsView(QWidget):
         # Bottom save buttons
         self.setup_save_actions()
 
+        # Bind scroll content to scroll area and add it to outer layout
+        self.scroll_area.setWidget(self.scroll_content)
+        self.outer_layout.addWidget(self.scroll_area)
+
         # Load initial values
         self.load_settings()
 
     def setup_model_defaults(self):
-        self.group_model = SimpleCardWidget(self)
+        self.group_model = SimpleCardWidget(self.scroll_content)
         layout = QVBoxLayout(self.group_model)
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -54,6 +77,7 @@ class SettingsView(QWidget):
         self.combo_model = ComboBox(self.group_model)
         self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
         self.combo_model.setFixedWidth(350)
+        self.combo_model.setFixedHeight(32)
         layout.addWidget(self.combo_model)
 
         # Compute device
@@ -61,6 +85,7 @@ class SettingsView(QWidget):
         self.combo_device = ComboBox(self.group_model)
         self.combo_device.addItems(["cuda", "cpu"])
         self.combo_device.setFixedWidth(150)
+        self.combo_device.setFixedHeight(32)
         layout.addWidget(self.combo_device)
 
         # Confidence slider
@@ -78,7 +103,7 @@ class SettingsView(QWidget):
         self.main_layout.addWidget(self.group_model)
 
     def setup_visualization_styles(self):
-        self.group_vis = SimpleCardWidget(self)
+        self.group_vis = SimpleCardWidget(self.scroll_content)
         layout = QVBoxLayout(self.group_vis)
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -108,6 +133,7 @@ class SettingsView(QWidget):
         self.combo_color_overlay = ComboBox(self.group_vis)
         self.combo_color_overlay.addItems(["Red", "Blue", "Green", "Yellow"])
         self.combo_color_overlay.setFixedWidth(150)
+        self.combo_color_overlay.setFixedHeight(32)
         col1.addWidget(self.combo_color_overlay)
         colors_layout.addLayout(col1)
 
@@ -117,6 +143,7 @@ class SettingsView(QWidget):
         self.combo_color_box = ComboBox(self.group_vis)
         self.combo_color_box.addItems(["Green", "Red", "Blue", "Yellow"])
         self.combo_color_box.setFixedWidth(150)
+        self.combo_color_box.setFixedHeight(32)
         col2.addWidget(self.combo_color_box)
         colors_layout.addLayout(col2)
 
@@ -126,6 +153,7 @@ class SettingsView(QWidget):
         self.combo_color_contour = ComboBox(self.group_vis)
         self.combo_color_contour.addItems(["Blue", "Red", "Green", "Yellow"])
         self.combo_color_contour.setFixedWidth(150)
+        self.combo_color_contour.setFixedHeight(32)
         col3.addWidget(self.combo_color_contour)
         colors_layout.addLayout(col3)
 
@@ -134,7 +162,7 @@ class SettingsView(QWidget):
         self.main_layout.addWidget(self.group_vis)
 
     def setup_data_settings(self):
-        self.group_data = SimpleCardWidget(self)
+        self.group_data = SimpleCardWidget(self.scroll_content)
         layout = QVBoxLayout(self.group_data)
         layout.setSpacing(16)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -171,7 +199,7 @@ class SettingsView(QWidget):
         actions_layout = QHBoxLayout()
         actions_layout.addStretch()
 
-        self.btn_save = PrimaryPushButton("Save Configurations", self)
+        self.btn_save = PrimaryPushButton("Save Configurations", self.scroll_content)
         self.btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_save.clicked.connect(self.save_settings)
         actions_layout.addWidget(self.btn_save)
@@ -209,24 +237,6 @@ class SettingsView(QWidget):
                 err_dialog.hideCancelButton()
                 err_dialog.exec()
 
-    def color_to_rgb(self, name: str) -> list:
-        mapping = {
-            "Red": [255, 0, 0],
-            "Green": [0, 255, 0],
-            "Blue": [0, 0, 255],
-            "Yellow": [255, 255, 0]
-        }
-        return mapping.get(name, [255, 0, 0])
-
-    def rgb_to_color_name(self, rgb: list) -> str:
-        mapping = {
-            (255, 0, 0): "Red",
-            (0, 255, 0): "Green",
-            (0, 0, 255): "Blue",
-            (255, 255, 0): "Yellow"
-        }
-        return mapping.get(tuple(rgb), "Red")
-
     def load_settings(self):
         config = self.hm.config
         
@@ -249,9 +259,9 @@ class SettingsView(QWidget):
         box_color = config.get("box_color", [0, 255, 0])
         contour_color = config.get("contour_color", [0, 0, 255])
         
-        self.combo_color_overlay.setCurrentText(self.rgb_to_color_name(overlay_color))
-        self.combo_color_box.setCurrentText(self.rgb_to_color_name(box_color))
-        self.combo_color_contour.setCurrentText(self.rgb_to_color_name(contour_color))
+        self.combo_color_overlay.setCurrentText(self.settings_service.rgb_to_color_name(overlay_color))
+        self.combo_color_box.setCurrentText(self.settings_service.rgb_to_color_name(box_color))
+        self.combo_color_contour.setCurrentText(self.settings_service.rgb_to_color_name(contour_color))
 
         # Reports directory
         reports_dir = config.get("default_reports_dir", self.hm.reports_dir)
@@ -259,16 +269,16 @@ class SettingsView(QWidget):
         self.lbl_reports_dir.setToolTip(reports_dir)
 
     def save_settings(self):
-        new_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "overlay_alpha": self.slider_alpha.value() / 100.0,
-            "overlay_color": self.color_to_rgb(self.combo_color_overlay.currentText()),
-            "box_color": self.color_to_rgb(self.combo_color_box.currentText()),
-            "contour_color": self.color_to_rgb(self.combo_color_contour.currentText()),
-            "default_reports_dir": self.lbl_reports_dir.toolTip()
-        }
+        new_config = self.settings_service.build_config_from_state(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            overlay_alpha=self.slider_alpha.value() / 100.0,
+            overlay_color_name=self.combo_color_overlay.currentText(),
+            box_color_name=self.combo_color_box.currentText(),
+            contour_color_name=self.combo_color_contour.currentText(),
+            reports_dir=self.lbl_reports_dir.toolTip()
+        )
         
         success = self.hm.save_config(new_config)
         if success:
@@ -280,3 +290,15 @@ class SettingsView(QWidget):
             err_dialog = MessageBox("Error", "Failed to write settings to disk.", self.window())
             err_dialog.hideCancelButton()
             err_dialog.exec()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force a layout and geometry recalculation when switching to settings view
+        self.layout().update()
+        self.layout().activate()
+        if hasattr(self, 'scroll_content') and self.scroll_content.layout():
+            self.scroll_content.layout().update()
+            self.scroll_content.layout().activate()
+        for child in self.findChildren(QWidget):
+            child.updateGeometry()
+            child.update()

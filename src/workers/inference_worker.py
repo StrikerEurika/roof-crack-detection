@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
+from src.utils import get_inference_pipeline
+
 
 class InferenceWorker(QThread):
     """Worker thread for running crack detection inference on a single image."""
@@ -45,51 +47,10 @@ class InferenceWorker(QThread):
 
             self.progress_signal.emit(f"Initializing pipeline with model variant '{variant}' on {device}...")
             
-            # Check model cache
-            pipeline = None
-            if self.model_cache is not None and variant in self.model_cache:
-                # If cached, update pipeline parameters without reloading weights
-                pipeline = self.model_cache[variant]
-                pipeline.device = device
-                pipeline.patch_size = patch_size
-                pipeline.overlap_ratio = overlap_ratio
-                pipeline.confidence_threshold = confidence_threshold
-                pipeline.use_tta = use_tta
-                pipeline.preprocessor.use_clahe = use_clahe
-                pipeline.preprocessor.clip_limit = clahe_clip_limit
-                pipeline.overlay_alpha = overlay_alpha
-                pipeline.overlay_color = overlay_color
-                pipeline.box_color = box_color
-                pipeline.box_thickness = box_thickness
-                pipeline.contour_color = contour_color
-                pipeline.contour_thickness = contour_thickness
-                # Update PatchExtractor
-                pipeline.extractor.patch_size = patch_size
-                pipeline.extractor.overlap_ratio = overlap_ratio
+            pipeline, is_cached = get_inference_pipeline(self.config, self.model_cache)
+            if is_cached:
                 self.progress_signal.emit("Using cached model weights.")
-            else:
-                # Import and load model
-                from findcrack.inference import CrackInferencePipeline
-                
-                pipeline = CrackInferencePipeline.from_pretrained(
-                    variant=variant,
-                    device=device,
-                    patch_size=patch_size,
-                    overlap_ratio=overlap_ratio,
-                    confidence_threshold=confidence_threshold,
-                    use_tta=use_tta,
-                    use_clahe=use_clahe,
-                    clahe_clip_limit=clahe_clip_limit,
-                    overlay_alpha=overlay_alpha,
-                    overlay_color=overlay_color,
-                    box_color=box_color,
-                    box_thickness=box_thickness,
-                    contour_color=contour_color,
-                    contour_thickness=contour_thickness
-                )
-                
-                if self.model_cache is not None:
-                    self.model_cache[variant] = pipeline
+
 
             self.progress_signal.emit("Running sliding window inference on image patches...")
             

@@ -61,17 +61,30 @@ wheels = [
 
 [[package]]
 name = "findcrack"
-version = "0.1.5"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.6"
+source = { editable = "../findcrack" }
 dependencies = [
     { name = "albumentations" },
     { name = "onnxruntime" },
     { name = "opencv-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/02/e3/3d9d1a28e62f4ffebcdd625f093c2e07da83613028efecb80d4cdd512d04/findcrack-0.1.5.tar.gz", hash = "sha256:b0941f9e26cf4d56429c01efc6aaac6a0a502fc803b8abec852cd93d2da99378", size = 27468, upload-time = "2026-06-27T16:25:04.488Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/5d/399aa8d1dded86b44a6932156b9b184aae20b413bd140e329da552415b7b/findcrack-0.1.5-py3-none-any.whl", hash = "sha256:4d0cf9b0ca6d31048e7995cac37aa9f34f54a111c545c544fed2719f94f534d1", size = 25332, upload-time = "2026-06-27T16:25:03.265Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "albumentations", specifier = ">=2.0.8" },
+    { name = "onnxruntime", specifier = ">=1.27.0" },
+    { name = "opencv-python", specifier = ">=4.13.0.92" },
+    { name = "torch", marker = "extra == 'standard'", specifier = ">=2.6.0" },
+    { name = "torch", marker = "extra == 'torch'", specifier = ">=2.6.0" },
+    { name = "torchaudio", marker = "extra == 'standard'", specifier = ">=2.6.0" },
+    { name = "torchaudio", marker = "extra == 'torch'", specifier = ">=2.6.0" },
+    { name = "torchvision", marker = "extra == 'standard'", specifier = ">=0.21.0" },
+    { name = "torchvision", marker = "extra == 'torch'", specifier = ">=0.21.0" },
 ]
+provides-extras = ["standard", "torch"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "findcrack", editable = "../findcrack" }]
 
 [[package]]
 name = "flatbuffers"
@@ -3671,7 +3684,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "findcrack", specifier = ">=0.1.5" },
+    { name = "findcrack", editable = "../findcrack" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "pyside6", specifier = ">=6.11.1" },
     { name = "pyside6-fluent-widgets", specifier = ">=1.11.2" },
