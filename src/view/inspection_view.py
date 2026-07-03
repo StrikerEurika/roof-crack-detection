@@ -14,7 +14,7 @@ from qfluentwidgets import (
 )
 
 from src.view.components.image_viewer import ImageViewer
-from src.viewmodel import InspectionViewModel
+from src.view_model import InspectionViewModel
 from src import check_gpu_available
 
 class InspectionView(QWidget):

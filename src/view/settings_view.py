@@ -8,7 +8,7 @@ from qfluentwidgets import (
     InfoBar, InfoBarPosition
 )
 
-from src.viewmodel import SettingsViewModel
+from src.view_model import SettingsViewModel
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility via SettingsViewModel."""

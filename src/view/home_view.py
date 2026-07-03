@@ -10,7 +10,7 @@ from qfluentwidgets import (
 )
 
 from src.view.components.custom_chart import InspectionChart
-from src.viewmodel.home_view_model import HomeViewModel
+from src.view_model.home_view_model import HomeViewModel
 
 class HomeView(QWidget):
     """The landing homepage dashboard of the crack inspection desktop application, refactored using MVVM."""

@@ -3,7 +3,7 @@ from PySide6.QtCore import Slot
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
 
-from src.viewmodel import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
+from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
 from src.view import HomeView, InspectionView, BatchView, SettingsView
 
 class MainWindow(FluentWindow):
