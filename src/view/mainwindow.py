@@ -6,7 +6,7 @@ from qfluentwidgets import FluentIcon as FIF
 from src.viewmodel import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
 from src.view import HomeView, InspectionView, BatchView, SettingsView
 
-class MainWindowView(FluentWindow):
+class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
 
     def __init__(self, history_manager, parent=None):
