@@ -128,7 +128,7 @@ class InspectionView(QWidget):
         left_layout.addWidget(self.card_model)
 
         # Run Action Button
-        self.btn_run = PrimaryPushButton("⚡ RUN DETECTOR", self.panel_left)
+        self.btn_run = PrimaryPushButton("RUN DETECTOR", self.panel_left)
         self.btn_run.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_run.setEnabled(False)
         self.btn_run.clicked.connect(self.run_detection)
@@ -300,7 +300,7 @@ class InspectionView(QWidget):
             self.btn_run.setEnabled(True)
             self.btn_export_pdf.setEnabled(False)
             self.table_cracks.setRowCount(0)
-            self.lbl_summary.setText("Image loaded. Press '⚡ RUN DETECTOR' to begin analysis.")
+            self.lbl_summary.setText("Image loaded. Press 'RUN DETECTOR' to begin analysis.")
             self.txt_status.setText(f"Loaded file: {file_path}\nReady to run detection.")
             self.tab_widget.setCurrentIndex(0)
 

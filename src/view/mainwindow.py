@@ -50,16 +50,16 @@ class MainWindow(FluentWindow):
 
     def setup_views(self):
         # Initialize the ViewModels
-        self.home_vm = HomeViewModel(self.hm)
-        self.inspection_vm = InspectionViewModel(self.hm, self.inference_service)
-        self.batch_vm = BatchViewModel(self.hm, self.inference_service)
-        self.settings_vm = SettingsViewModel(self.hm)
+        self.home_view_model = HomeViewModel(self.hm)
+        self.inspection_view_model = InspectionViewModel(self.hm, self.inference_service)
+        self.batch_view_model = BatchViewModel(self.hm, self.inference_service)
+        self.settings_view_model = SettingsViewModel(self.hm)
 
         # Initialize the views
-        self.page_home = HomeView(self.home_vm, self)
-        self.page_single = InspectionView(self.inspection_vm, self)
-        self.page_batch = BatchView(self.batch_vm, self)
-        self.page_settings = SettingsView(self.settings_vm, self)
+        self.page_home = HomeView(self.home_view_model, self)
+        self.page_single = InspectionView(self.inspection_view_model, self)
+        self.page_batch = BatchView(self.batch_view_model, self)
+        self.page_settings = SettingsView(self.settings_view_model, self)
 
         # Set object names (crucial for QFluentWidgets navigation routing)
         self.page_home.setObjectName("homeView")
@@ -107,7 +107,7 @@ class MainWindow(FluentWindow):
     def on_view_historical_record(self, record):
         """Triggered from history list to load results and view details."""
         self.switchTo(self.page_single)
-        self.page_single.load_historical_record(record)
+        self.inspection_view_model.load_historical_record(record)
 
     @Slot()
     def on_settings_saved(self):
@@ -157,7 +157,7 @@ class MainWindow(FluentWindow):
                 # Replace in StackedWidget using addWidget to sync PopUpAniInfo correctly
                 self.stackedWidget.removeWidget(self.page_home)
                 self.page_home.deleteLater()
-                new_page = src.view.home_view.HomeView(self.home_vm, self)
+                new_page = src.view.home_view.HomeView(self.home_view_model, self)
                 new_page.setObjectName("homeView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_home = new_page
@@ -195,7 +195,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_single)
                 self.page_single.deleteLater()
-                new_page = src.view.inspection_view.InspectionView(self.inspection_vm, self)
+                new_page = src.view.inspection_view.InspectionView(self.inspection_view_model, self)
                 new_page.setObjectName("inspectionView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_single = new_page
@@ -228,7 +228,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_batch)
                 self.page_batch.deleteLater()
-                new_page = src.view.batch_view.BatchView(self.batch_vm, self)
+                new_page = src.view.batch_view.BatchView(self.batch_view_model, self)
                 new_page.setObjectName("batchView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_batch = new_page
@@ -261,7 +261,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_settings)
                 self.page_settings.deleteLater()
-                new_page = src.view.settings_view.SettingsView(self.settings_vm, self)
+                new_page = src.view.settings_view.SettingsView(self.settings_view_model, self)
                 new_page.setObjectName("settingsView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_settings = new_page

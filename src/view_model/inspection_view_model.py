@@ -44,6 +44,13 @@ class InspectionViewModel(QObject):
     def load_historical_record(self, record: dict):
         """Loads historical record state directly into the ViewModel."""
         self.current_image_path = record.get("image_path")
+        
+        
+        # Reconstruct latest_result so the View can use bounding boxes for zooming
+        self.latest_result = {
+            "bounding_boxes": record.get("bounding_boxes", [])
+        }
+        
         self.latest_record = record
         self.latest_result = None
         self.record_loaded.emit(record)
@@ -98,6 +105,11 @@ class InspectionViewModel(QObject):
             processed = self.inspection_service.save_and_record_results(
                 results, self.current_image_path, results["model_used"]
             )
+            
+            # bounding boxes are saved in the history record
+            if "bounding_boxes" not in processed.record:
+                processed.record["bounding_boxes"] = results.get("bounding_boxes", [])
+            
             self.latest_record = processed.record
 
             output_payload = {

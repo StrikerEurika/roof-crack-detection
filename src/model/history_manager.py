@@ -1,7 +1,10 @@
+# src/model/history_manager.py
+
 import os
 import json
 import uuid
 from datetime import datetime
+from typing import List, Dict, Any
 
 class HistoryManager:
     """Manages system configuration and inspection history database."""
@@ -24,7 +27,7 @@ class HistoryManager:
         self.config = self._load_config()
         self.history = self._load_history()
 
-    def _load_config(self) -> dict:
+    def _load_config(self) -> Dict:
         default_config = {
             "model_variant": "Seg_UNET_CFD_actual_v2",
             "device": "cuda",
@@ -54,7 +57,7 @@ class HistoryManager:
                 
         return default_config
 
-    def save_config(self, new_config: dict = None) -> bool:
+    def save_config(self, new_config: Dict = None) -> bool:
         if new_config:
             self.config.update(new_config)
         try:
@@ -65,7 +68,7 @@ class HistoryManager:
             print(f"Error saving config.json: {e}")
             return False
 
-    def _load_history(self) -> list:
+    def _load_history(self) -> List[Dict[str, Any]]:
         if os.path.exists(self.history_path):
             try:
                 with open(self.history_path, "r") as f:
@@ -86,7 +89,7 @@ class HistoryManager:
     def add_record(self, image_path: str, crack_detected: bool, 
                    confidence: float, crack_count: int, model_used: str,
                    vis_image_path: str = None, mask_image_path: str = None,
-                   elapsed_time: float = 0.0) -> dict:
+                   elapsed_time: float = 0.0, bounding_boxes: List[Dict[str, Any]] = None) -> Dict:
         """Adds an inspection record and saves history."""
         record_id = str(uuid.uuid4())
         record = {
@@ -101,7 +104,8 @@ class HistoryManager:
             "vis_image_path": vis_image_path,
             "mask_image_path": mask_image_path,
             "elapsed_time": float(elapsed_time),
-            "report_path": ""
+            "report_path": "",
+            "bounding_boxes": bounding_boxes or []
         }
         self.history.insert(0, record) # Put latest at the beginning
         self.save_history()
