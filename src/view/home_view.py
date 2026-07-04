@@ -1,7 +1,13 @@
+""" Context:
+- What: The HomeView class is a QWidget that provides the main dashboard interface for the roof crack detection application.
+- Path: src/view/home_view.py
+"""
+
+
 import os
 from datetime import datetime
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView, QTableWidgetItem
-from PySide6.QtGui import QPixmap, QColor
+from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt, Signal, Slot
 
 from qfluentwidgets import (
@@ -256,10 +262,10 @@ class HomeView(QWidget):
             status_widget = QLabel()
             status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
             if crack_detected:
-                status_widget.setText(f"⚠️ YES ({crack_count})")
+                status_widget.setText(f"YES ({crack_count})")
                 status_widget.setStyleSheet("color: #e81123; font-weight: bold; background: transparent;")
             else:
-                status_widget.setText("✅ NONE")
+                status_widget.setText("NONE")
                 status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
             self.table_recent.setCellWidget(row_idx, 3, status_widget)
             

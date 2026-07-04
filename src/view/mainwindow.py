@@ -69,7 +69,7 @@ class MainWindow(FluentWindow):
 
     def setup_navigation(self):
         # Add sub-interfaces to the navigation sidebar
-        self.addSubInterface(self.page_home, FIF.HOME, "Dashboard / Home")
+        self.addSubInterface(self.page_home, FIF.HOME, "Dashboard")
         self.addSubInterface(self.page_single, FIF.ZOOM, "Single Inspection")
         self.addSubInterface(self.page_batch, FIF.FOLDER, "Batch Processing")
         
@@ -121,10 +121,16 @@ class MainWindow(FluentWindow):
         self.inference_service.clear_cache()
 
     def setup_hot_reload(self):
-        """Sets up the filesystem watcher for all View files."""
+        """Sets up the filesystem watcher for all View files."""      
         self.watcher = QFileSystemWatcher(self)
         view_dir = os.path.dirname(os.path.abspath(__file__))
-        views_to_watch = ["home_view.py", "inspection_view.py", "batch_view.py", "settings_view.py"]
+        views_to_watch = [
+            "home_view.py", 
+            "inspection_view.py", 
+            "batch_view.py", 
+            "settings_view.py",
+            ".",
+        ]
         for view_file in views_to_watch:
             path = os.path.join(view_dir, view_file)
             if os.path.exists(path):
@@ -134,7 +140,7 @@ class MainWindow(FluentWindow):
     def hot_reload_view(self, file_path):
         """Dynamic in-place swap of modified views, preserving ViewModel state."""
         filename = os.path.basename(file_path)
-        print(f"🔥 Hot-reloading view because of modification in: {filename}")
+        print(f"Hot-reloading view because of modification in: {filename}")
         
         try:
             if filename == "home_view.py":
@@ -275,10 +281,10 @@ class MainWindow(FluentWindow):
                 
                 if is_current:
                     self.switchTo(self.page_settings)
-                print("✨ SettingsView reloaded in-place successfully!")
+                print("SettingsView reloaded in-place successfully!")
 
         except Exception as e:
-            print(f"❌ Failed to hot-reload view {filename}: {e}")
+            print(f"Failed to hot-reload view {filename}: {e}")
             
         # Re-add watched path (some editors recreate files on save)
         self.watcher.addPath(file_path)

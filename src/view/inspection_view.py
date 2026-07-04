@@ -1,3 +1,9 @@
+""" Context:
+- What: The InspectionView class is a QWidget that provides a user interface for analyzing roof images for cracks. 
+It allows users to select an image, configure model parameters, run detection, view results, and export reports.
+- Path: src/view/inspection_view.py
+"""
+
 import os
 import numpy as np
 from PySide6.QtWidgets import (

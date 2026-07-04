@@ -1,3 +1,9 @@
+""" Context:
+- What: The BatchView class is a QWidget that provides a user interface for performing batch roof crack detection on multiple images from a folder.
+- Path: src/view/batch_view.py
+"""
+
+
 import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem, QLabel
