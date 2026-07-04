@@ -1,3 +1,5 @@
+# src/view_model/inspection_view_model.py
+
 import os
 import numpy as np
 from PySide6.QtCore import QObject, Signal, Slot

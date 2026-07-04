@@ -119,13 +119,13 @@ class BatchView(QWidget):
         left_layout.addWidget(self.card_model)
 
         # Action Buttons
-        self.btn_start = PrimaryPushButton("⚡ START BATCH INSPECTION", self.panel_left)
+        self.btn_start = PrimaryPushButton("START BATCH INSPECTION", self.panel_left)
         self.btn_start.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_start.setEnabled(False)
         self.btn_start.clicked.connect(self.start_batch)
         left_layout.addWidget(self.btn_start)
 
-        self.btn_cancel = PushButton(FIF.CLOSE, "🛑 CANCEL BATCH", self.panel_left)
+        self.btn_cancel = PushButton(FIF.CLOSE, "CANCEL BATCH", self.panel_left)
         self.btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_cancel.setEnabled(False)
         self.btn_cancel.clicked.connect(self.cancel_batch)
@@ -301,10 +301,10 @@ class BatchView(QWidget):
         status_widget = QLabel()
         status_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if crack_detected:
-            status_widget.setText("⚠️ YES")
+            status_widget.setText("YES")
             status_widget.setStyleSheet("color: #e81123; font-weight: bold; background: transparent;")
         else:
-            status_widget.setText("✅ NONE")
+            status_widget.setText("NONE")
             status_widget.setStyleSheet("color: #107c41; font-weight: bold; background: transparent;")
         self.table_queue.setCellWidget(row_idx, 2, status_widget)
 

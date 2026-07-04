@@ -1,3 +1,5 @@
+# src/view_model/home_view_model.py
+
 from PySide6.QtCore import QObject, Signal
 from src.model import HistoryManager
 from src.services import DashboardService

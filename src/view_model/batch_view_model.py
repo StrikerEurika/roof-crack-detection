@@ -1,3 +1,5 @@
+# src/view_model/batch_view_model.py
+
 import os
 from PySide6.QtCore import QObject, Signal, Slot
 from src.workers.batch_worker import BatchWorker
