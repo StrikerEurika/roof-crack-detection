@@ -236,7 +236,7 @@ class InspectionView(QWidget):
         self.view_model.report_export_failed.connect(self.on_report_export_failed)
 
     def load_settings_defaults(self):
-        config = self.view_model.hm.config
+        config = self.view_model.get_config()
         
         self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
         
@@ -326,21 +326,15 @@ class InspectionView(QWidget):
         self.tab_widget.setCurrentIndex(0)
 
     def run_detection(self):
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.combo_patch.currentText()),
-            "overlap_ratio": self.slider_overlap.value() / 100.0,
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "overlay_alpha": self.view_model.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.view_model.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.view_model.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.view_model.hm.config.get("box_thickness", 2),
-            "contour_color": self.view_model.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.view_model.hm.config.get("contour_thickness", 2),
-        }
+        pipeline_config = self.view_model.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            patch_size=int(self.combo_patch.currentText()),
+            overlap_ratio=self.slider_overlap.value() / 100.0,
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
         self.view_model.run_detection(pipeline_config)
 
     @Slot()

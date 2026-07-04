@@ -5,18 +5,19 @@ from PySide6.QtCore import Slot, QFileSystemWatcher
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
 
+from src.model import HistoryManager
+from src.services import InferenceService
 from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
 from src.view import HomeView, InspectionView, BatchView, SettingsView
 
 class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
 
-    def __init__(self, history_manager, parent=None):
+    def __init__(self, app_context, parent=None):
         super().__init__(parent)
-        self.hm = history_manager
-        
-        # Cache loaded pipelines in mainwindow to share weights/sessions across tabs
-        self.model_cache = {}
+        self.context = app_context
+        self.hm = self._resolve_history_manager(app_context)
+        self.inference_service = self._resolve_inference_service(app_context)
 
         self.setWindowTitle("Roof Surface Crack Inspection Suite")
         self.resize(1280, 800)
@@ -37,11 +38,21 @@ class MainWindow(FluentWindow):
         # 4. Setup Hot-Reload Watcher for Views
         self.setup_hot_reload()
 
+    def _resolve_history_manager(self, app_context) -> HistoryManager:
+        if hasattr(app_context, "history_manager"):
+            return app_context.history_manager
+        return app_context
+
+    def _resolve_inference_service(self, app_context) -> InferenceService:
+        if hasattr(app_context, "inference_service"):
+            return app_context.inference_service
+        return InferenceService()
+
     def setup_views(self):
         # Initialize the ViewModels
         self.home_vm = HomeViewModel(self.hm)
-        self.inspection_vm = InspectionViewModel(self.hm, self.model_cache)
-        self.batch_vm = BatchViewModel(self.hm, self.model_cache)
+        self.inspection_vm = InspectionViewModel(self.hm, self.inference_service)
+        self.batch_vm = BatchViewModel(self.hm, self.inference_service)
         self.settings_vm = SettingsViewModel(self.hm)
 
         # Initialize the views
@@ -107,8 +118,7 @@ class MainWindow(FluentWindow):
         self.page_single.load_settings_defaults()
         self.page_batch.load_settings_defaults()
         
-        # If default settings changed, clear model cache to force reload on next runs
-        self.model_cache.clear()
+        self.inference_service.clear_cache()
 
     def setup_hot_reload(self):
         """Sets up the filesystem watcher for all View files."""

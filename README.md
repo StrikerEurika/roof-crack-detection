@@ -4,81 +4,119 @@ An enterprise-grade desktop application built with **PySide6** and **Python** fo
 
 ---
 
-## 🏛️ Application Architecture
+## Application Architecture
 
-The system is structured as a fully decoupled, component-based modular architecture to ensure easy maintainability, testability, and upgrades.
+The project follows MVVM with a small application composition layer. Views own UI widgets only, ViewModels own UI state and signals, services own domain/file/inference work, and workers isolate long-running inference from the Qt event loop.
 
 ```mermaid
 graph TD
-    Entry[src/main.py] --> Controllers[src.controllers]
-    Entry --> UI[src.ui]
+    Entry[src/main.py] --> App[src/app.py]
+    App --> Context[AppContext]
+    Context --> Model[src.model]
+    Context --> Services[src.services]
+    App --> MainWindow[src.view.mainwindow]
     
-    subgraph UI Package [src.ui]
-        MainWindow[MainWindow] --> ViewsPackage[src.ui.views]
+    subgraph ViewLayer[src.view]
+        MainWindow --> HomeView[HomeView]
+        MainWindow --> InspectionView[InspectionView]
+        MainWindow --> BatchView[BatchView]
+        MainWindow --> SettingsView[SettingsView]
+        InspectionView --> Components[src.view.components]
+        HomeView --> Components
+    end
+
+    subgraph ViewModelLayer[src.view_model]
+        HomeVM[HomeViewModel]
+        InspectionVM[InspectionViewModel]
+        BatchVM[BatchViewModel]
+        SettingsVM[SettingsViewModel]
+    end
+
+    subgraph ServiceLayer[src.services]
+        DashboardService[DashboardService]
+        InspectionService[InspectionService]
+        BatchService[BatchService]
+        SettingsService[SettingsService]
+        InferenceService[InferenceService]
+    end
+
+    subgraph WorkerLayer[src.workers]
+        SingleWorker[InferenceWorker]
+        FolderWorker[BatchWorker]
+    end
         
-        subgraph Views Package [src.ui.views]
-            ViewsPackage --> Home[HomeView]
-            ViewsPackage --> Inspect[InspectionView]
-            ViewsPackage --> Batch[BatchView]
-            ViewsPackage --> Settings[SettingsView]
-        end
-        
-        Inspect --> Components[src.ui.components]
-        Home --> Components
-    end
-    
-    subgraph Workers Package [src.workers]
-        Inspect --> SingleWorker[InferenceWorker]
-        Batch --> FolderWorker[BatchWorker]
-    end
-    
-    subgraph Reports Package [src.reports]
-        Inspect -.-> PDFGen[PDFReportGenerator]
-    end
-    
-    subgraph Core Library
-        SingleWorker --> FindCrack[findcrack.inference]
-        FolderWorker --> FindCrack
-    end
+    HomeView --> HomeVM
+    InspectionView --> InspectionVM
+    BatchView --> BatchVM
+    SettingsView --> SettingsVM
+    HomeVM --> DashboardService
+    InspectionVM --> InspectionService
+    InspectionVM --> SingleWorker
+    BatchVM --> BatchService
+    BatchVM --> FolderWorker
+    SettingsVM --> SettingsService
+    SingleWorker --> InferenceService
+    FolderWorker --> InferenceService
+    InferenceService --> FindCrack[findcrack.inference]
+    Model --> HistoryManager[HistoryManager]
+    Services --> HistoryManager
 ```
 
 ---
 
-## 📂 Submodule Breakdown
+## Submodule Breakdown
 
 Every directory in `src/` functions as an independent Python package with a dedicated `__init__.py` file exposing a clean public API (`__all__`). This isolates implementation files and prevents dependency cycles.
 
-### 1. `src.controllers` (State & Configuration)
+### 1. `src.app` (Composition Root)
+- **Role**: Creates `QApplication`, `HistoryManager`, shared `InferenceService`, and `MainWindow`.
+- **Key Modules**:
+  - `AppContext`: Shared dependency container passed into the UI shell.
+
+### 2. `src.model` (State & Configuration)
 - **Role**: Handles database loading, saving, and local setting management.
 - **Key Modules**:
-  - `HistoryManager`: Manages `settings/config.json` and the local run database `settings/history.json`. It provides methods to save configuration parameters, record results, and purge cache directories.
+  - `HistoryManager`: Manages `settings/config.json` and the local run database `settings/history.json`.
 
-### 2. `src.ui` (User Interface Shell)
-- **Role**: Contains the MainWindow application window shell.
-- **Key Modules**:
-  - `MainWindow`: Setups the application window shell and navigation sidebar using QFluentWidgets' `FluentWindow` control.
-
-### 3. `src.ui.views` (Navigation Panels / Tabs)
+### 3. `src.view` (Views)
 - **Role**: Distinct layout panels mapped to sidebar navigation items.
 - **Key Modules**:
+  - `MainWindow`: Sets up the application shell and sidebar navigation using QFluentWidgets' `FluentWindow`.
   - `HomeView`: Main dashboard displaying overall KPI statistics, 7-day inspection trends, and a quick-action overview of the last 10 runs using Fluent components.
   - `InspectionView`: Interactive single-image detection view where a user can configure model params, view overlays, zoom/pan results, and export PDF reports.
   - `BatchView`: Configures batch queues for image directories, processes queues using worker threads, and copies outputs to custom destinations.
   - `SettingsView`: Interactive forms to override system defaults, adjust styling colors, change default paths, and clear history.
 
-### 4. `src.ui.components` (Reusable GUI Widgets)
+### 4. `src.view_model` (ViewModels)
+- **Role**: Exposes Qt signals/slots and UI state between views and services.
+- **Key Modules**:
+  - `HomeViewModel`: Dashboard refresh and record deletion.
+  - `InspectionViewModel`: Single-image workflow, history loading, and PDF export.
+  - `BatchViewModel`: Batch folder workflow, cancellation, and file completion handling.
+  - `SettingsViewModel`: Settings persistence and history maintenance.
+
+### 5. `src.view.components` (Reusable GUI Widgets)
 - **Role**: Self-contained UI components shared across views.
 - **Key Modules**:
   - `ImageViewer`: A graphics view subclass enabling mouse wheel zooming, cursor panning, and drag-and-drop file loading.
   - `InspectionChart`: A chart component representing 7-day bar graphs showing the ratio of inspected-to-cracked roofs.
 
-### 5. `src.workers` (Background Processing)
+### 6. `src.services` (Domain Services)
+- **Role**: Owns business logic, file persistence, settings conversion, dashboard aggregation, and model inference cache.
+- **Key Modules**:
+  - `InferenceService`: Loads/caches `findcrack` pipelines, applies runtime config, and shapes inference results.
+  - `InspectionService`: Saves single-image result assets and records history.
+  - `BatchService`: Saves batch output copies and records history.
+  - `DashboardService`: Computes KPIs and recent records.
+  - `SettingsService`: Converts setting values and builds config dictionaries.
+
+### 7. `src.workers` (Background Processing)
 - **Role**: Performs intensive image transformations and deep learning model inference in parallel threads, preventing GUI freezing.
 - **Key Modules**:
   - `InferenceWorker`: Runs single-image sliding-window predictions.
   - `BatchWorker`: Processes queues of images with cancellation capabilities and saves progress signals.
 
-### 6. `src.reports` (Automated PDF Reporting)
+### 8. `src.reports` (Automated PDF Reporting)
 - **Role**: Formats results and saves them in offline document formats.
 - **Key Modules**:
   - `PDFReportGenerator`: Reads and interpolates values in the HTML report template and prints them to an A4 PDF using Qt’s native print engine.
@@ -90,23 +128,24 @@ Every directory in `src/` functions as an independent Python package with a dedi
 
 ### How to Add a New Neural Network Model
 1. If the new model is published to the `findcrack` library:
-   - Go to `src/ui/views/inspection_view.py`, `src/ui/views/batch_view.py`, and `src/ui/views/settings_view.py`.
+   - Go to `src/view/inspection_view.py`, `src/view/batch_view.py`, and `src/view/settings_view.py`.
    - Add the variant identifier to the `QComboBox` setup (e.g., `self.combo_model.addItems(["YourNewModelName"])`).
-2. The `InferenceWorker` and `BatchWorker` automatically load the model variant through `CrackInferencePipeline.from_pretrained(variant=...)`. Ensure the model cache supports your new variant name.
+2. `InferenceService` loads the model variant through `CrackInferencePipeline.from_pretrained(variant=...)` and shares cached pipelines across single and batch workflows.
 
 ### How to Create a New Navigation View
-1. Add your new view file to `src/ui/views/` (e.g., `src/ui/views/analytics_view.py`).
-2. Expose the new class in `src/ui/views/__init__.py`:
+1. Add your new view file to `src/view/` (e.g., `src/view/analytics_view.py`).
+2. Expose the new class in `src/view/__init__.py`:
    ```python
    from .analytics_view import AnalyticsView
    __all__ = [..., "AnalyticsView"]
    ```
-3. Instantiate and register the view in `src/ui/mainwindow.py`:
+3. Add matching ViewModel in `src/view_model/` when the view has state or actions.
+4. Instantiate and register the view in `src/view/mainwindow.py`:
    - Set unique object name in `setup_views()` (e.g., `self.page_analytics.setObjectName("analyticsView")`).
    - Add view to sidebar in `setup_navigation()` using `self.addSubInterface(self.page_analytics, FIF.PLACEHOLDER, "Analytics")`.
 
 ### How to Optimize/Change UI Components
-- Reusable components reside inside `src/ui/components/`. If you create a new widget that is utilized in more than one view, place it there, and add it to `src/ui/components/__init__.py`.
+- Reusable components reside inside `src/view/components/`. If you create a new widget that is utilized in more than one view, place it there, and add it to `src/view/components/__init__.py`.
 
 ---
 

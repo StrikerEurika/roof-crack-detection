@@ -183,7 +183,7 @@ class BatchView(QWidget):
         self.view_model.batch_cancelled.connect(self.on_batch_cancelled)
 
     def load_settings_defaults(self):
-        config = self.view_model.hm.config
+        config = self.view_model.get_config()
         
         self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
         
@@ -232,21 +232,13 @@ class BatchView(QWidget):
             self.btn_start.setEnabled(False)
 
     def start_batch(self):
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.view_model.hm.config.get("patch_size", 512)),
-            "overlap_ratio": float(self.view_model.hm.config.get("overlap_ratio", 0.2)),
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "overlay_alpha": self.view_model.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.view_model.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.view_model.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.view_model.hm.config.get("box_thickness", 2),
-            "contour_color": self.view_model.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.view_model.hm.config.get("contour_thickness", 2),
-        }
+        pipeline_config = self.view_model.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
         self.view_model.start_batch(pipeline_config)
 
     def cancel_batch(self):

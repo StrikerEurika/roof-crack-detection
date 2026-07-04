@@ -258,7 +258,7 @@ class SettingsView(QWidget):
         self.combo_color_contour.setCurrentText(self.rgb_to_color_name(contour_color))
 
         # Reports directory
-        reports_dir = config.get("default_reports_dir", self.view_model.hm.reports_dir)
+        reports_dir = config.get("default_reports_dir", self.view_model.get_reports_dir())
         self.lbl_reports_dir.setText(f"Reports Directory: {reports_dir}")
         self.lbl_reports_dir.setToolTip(reports_dir)
 

@@ -2,7 +2,7 @@ import os
 from PySide6.QtCore import QObject, Signal, Slot
 from src.workers.batch_worker import BatchWorker
 from src.model import HistoryManager
-from src.services import BatchService
+from src.services import BatchService, InferenceService
 
 class BatchViewModel(QObject):
     """ViewModel managing folder-level batch processing execution and states."""
@@ -16,10 +16,10 @@ class BatchViewModel(QObject):
     batch_error = Signal(str)
     batch_cancelled = Signal()
 
-    def __init__(self, history_manager: HistoryManager, model_cache: dict, parent=None):
+    def __init__(self, history_manager: HistoryManager, inference_service: InferenceService, parent=None):
         super().__init__(parent)
         self.hm = history_manager
-        self.model_cache = model_cache
+        self.inference_service = inference_service
         self.batch_service = BatchService(history_manager)
         self.active_worker = None
         self.input_dir = None
@@ -42,6 +42,28 @@ class BatchViewModel(QObject):
         self.output_dir = dir_path
         self.output_dir_changed.emit(dir_path)
 
+    def get_config(self) -> dict:
+        return self.hm.config
+
+    def build_pipeline_config(
+        self,
+        model_variant: str,
+        device: str,
+        confidence_threshold: float,
+        use_tta: bool,
+        use_clahe: bool,
+    ) -> dict:
+        config = self.hm.config
+        return self.batch_service.build_pipeline_config(
+            model_variant=model_variant,
+            device=device,
+            confidence_threshold=confidence_threshold,
+            patch_size=int(config.get("patch_size", 512)),
+            overlap_ratio=float(config.get("overlap_ratio", 0.2)),
+            use_tta=use_tta,
+            use_clahe=use_clahe,
+        )
+
     def start_batch(self, config_dict: dict):
         """Launches the background BatchWorker thread."""
         if not self.input_dir or not self.output_dir:
@@ -50,7 +72,7 @@ class BatchViewModel(QObject):
 
         self.batch_started.emit()
 
-        self.active_worker = BatchWorker(config_dict, self.input_dir, self.output_dir, self.model_cache)
+        self.active_worker = BatchWorker(config_dict, self.input_dir, self.output_dir, self.inference_service)
         self.active_worker.started_signal.connect(self._on_batch_started)
         self.active_worker.progress_signal.connect(self.batch_progress.emit)
         self.active_worker.file_completed_signal.connect(self._on_file_completed)

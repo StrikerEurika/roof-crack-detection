@@ -4,7 +4,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from src.workers.inference_worker import InferenceWorker
 from src.reports.pdf_generator import PDFReportGenerator
 from src.model import HistoryManager
-from src.services import InspectionService
+from src.services import InferenceService, InspectionService
 
 class InspectionViewModel(QObject):
     """ViewModel managing single image inspection operations, state, and reports."""
@@ -18,10 +18,10 @@ class InspectionViewModel(QObject):
     report_exported = Signal(str)
     report_export_failed = Signal(str)
 
-    def __init__(self, history_manager: HistoryManager, model_cache: dict, parent=None):
+    def __init__(self, history_manager: HistoryManager, inference_service: InferenceService, parent=None):
         super().__init__(parent)
         self.hm = history_manager
-        self.model_cache = model_cache
+        self.inference_service = inference_service
         self.inspection_service = InspectionService(history_manager)
         self.active_worker = None
         self.current_image_path = None
@@ -46,6 +46,32 @@ class InspectionViewModel(QObject):
         self.latest_result = None
         self.record_loaded.emit(record)
 
+    def get_config(self) -> dict:
+        return self.hm.config
+
+    def get_default_reports_dir(self) -> str:
+        return self.hm.config.get("default_reports_dir", self.hm.reports_dir)
+
+    def build_pipeline_config(
+        self,
+        model_variant: str,
+        device: str,
+        confidence_threshold: float,
+        patch_size: int,
+        overlap_ratio: float,
+        use_tta: bool,
+        use_clahe: bool,
+    ) -> dict:
+        return self.inspection_service.build_pipeline_config(
+            model_variant=model_variant,
+            device=device,
+            confidence_threshold=confidence_threshold,
+            patch_size=patch_size,
+            overlap_ratio=overlap_ratio,
+            use_tta=use_tta,
+            use_clahe=use_clahe,
+        )
+
     def run_detection(self, config_dict: dict):
         """Launches the background InferenceWorker thread with selected configurations."""
         if not self.current_image_path or not os.path.exists(self.current_image_path):
@@ -55,7 +81,7 @@ class InspectionViewModel(QObject):
         self.detection_started.emit()
 
         # Instantiate background worker
-        self.active_worker = InferenceWorker(config_dict, self.current_image_path, self.model_cache)
+        self.active_worker = InferenceWorker(config_dict, self.current_image_path, self.inference_service)
         self.active_worker.progress_signal.connect(self.detection_progress.emit)
         self.active_worker.finished_signal.connect(self._on_inference_completed)
         self.active_worker.error_signal.connect(self._on_inference_error)

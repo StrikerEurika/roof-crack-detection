@@ -52,6 +52,9 @@ class SettingsViewModel(QObject):
         """Returns the current reports directory path."""
         return self.settings_service.hm.config.get("default_reports_dir", self.hm.reports_dir)
 
+    def get_reports_dir(self) -> str:
+        return self.hm.reports_dir
+
     def color_to_rgb(self, name: str) -> list:
         """Helper to convert color name to RGB array."""
         return self.settings_service.color_to_rgb(name)
