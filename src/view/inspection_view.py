@@ -149,7 +149,18 @@ class InspectionView(QWidget):
 
         self.layout.addWidget(self.panel_left)
 
+    def on_zoom_changed(self, zoom: float):
+        self.viewer_status.setText(f"Current Zoom: {zoom:.2f}x")
+
+    def on_fitted(self):
+        self.viewer_status.setText(f"Status: Fit to Window")
+
     def setup_display_panel(self):
+        # Feedback label for user status (optional UI improvement)
+        self.viewer_status = QLabel(self)
+        self.viewer_status.setStyleSheet("color: #3b82f6; font-weight: bold; font-size: 13px; margin-top: 4px;")
+        self.viewer_status.setText("")
+
         self.panel_right = QWidget(self)
         right_layout = QVBoxLayout(self.panel_right)
         right_layout.setContentsMargins(0, 0, 0, 0)
@@ -161,25 +172,37 @@ class InspectionView(QWidget):
         # 1. Visualization tab
         self.viewer_vis = ImageViewer(self.tab_widget)
         self.viewer_vis.image_dropped.connect(self.on_image_dropped)
+        # Connect overlay signals for user feedback
+        self.viewer_vis.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_vis.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_vis, "🔍 Visualization Overlay")
         
         # 2. Original tab
         self.viewer_orig = ImageViewer(self.tab_widget)
+        self.viewer_orig.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_orig.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_orig, "Original Image")
         
         # 3. Transparent Overlay tab
         self.viewer_overlay = ImageViewer(self.tab_widget)
+        self.viewer_overlay.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_overlay.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_overlay, "Crack Overlay")
 
         # 4. Binary Mask tab
         self.viewer_mask = ImageViewer(self.tab_widget)
+        self.viewer_mask.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_mask.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_mask, "Binary Mask")
 
         # 5. Confidence Map tab
         self.viewer_conf = ImageViewer(self.tab_widget)
+        self.viewer_conf.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_conf.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_conf, "Confidence Heatmap")
 
         right_layout.addWidget(self.tab_widget, stretch=4)
+        right_layout.addWidget(self.viewer_status)
 
         # Bottom Area: Results Table & Actions
         results_layout = QHBoxLayout()

@@ -1,26 +1,28 @@
 import numpy as np
 from typing import Optional
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QLabel
 from PySide6.QtGui import QPixmap, QPainter, QImage
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 
 class ImageViewer(QGraphicsView):
-    """Interactive image viewer widget. Zoom, pan, drag-and-drop."""
+    """Interactive image viewer widget. Zoom, pan, drag-and-drop. Shows overlay feedback and exposes signals for parent tracking."""
     IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif')
     ZOOM_FACTOR = 1.15
     MIN_ZOOM = 0.1
     MAX_ZOOM = 15.0
 
     image_dropped = Signal(str)
+    zoom_changed = Signal(float)  # Emits current_zoom value
+    fitted = Signal()  # Emits when fit_in_view called
 
     def __init__(self, parent: Optional[QGraphicsView] = None):
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
-        
+
         self.pixmap_item = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap_item)
-        
+
         # Configure viewer behavior
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -29,15 +31,25 @@ class ImageViewer(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        
+
         # Set drag & drop
         self.setAcceptDrops(True)
-        
+
         # Zoom parameters
         self.zoom_factor = self.ZOOM_FACTOR
         self.current_zoom = 1.0
         self.min_zoom = self.MIN_ZOOM
         self.max_zoom = self.MAX_ZOOM
+
+        # Overlay QLabel for zoom/fit feedback
+        self.feedback_label = QLabel(self)
+        self.feedback_label.setStyleSheet("background: rgba(0, 0, 0, 160); color: white; border-radius: 6px; padding: 6px; font-size: 13px;")
+        self.feedback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.feedback_label.setVisible(False)
+        self.feedback_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.feedback_timer = QTimer(self)
+        self.feedback_timer.setSingleShot(True)
+        self.feedback_timer.timeout.connect(self._hide_feedback)
 
     def set_image(self, pixmap: QPixmap) -> None:
         """Display QPixmap, fit to screen."""
@@ -83,56 +95,87 @@ class ImageViewer(QGraphicsView):
         else:
             raise ValueError(f"Unsupported number of channels: {c}")
 
-
     def fit_in_view(self):
-        """Fits the pixmap to the viewport bounds."""
+        """Fits the pixmap to the viewport bounds and show feedback overlay. Emits fitted signal."""
         rect = self.pixmap_item.boundingRect()
         if not rect.isEmpty():
             self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
             self.current_zoom = 1.0
+            self._show_feedback("Fitted")
+            self.fitted.emit()
 
     def wheelEvent(self, event) -> None:
-        """Mouse wheel zoom."""
+        """Mouse wheel zoom. Shows overlay with zoom percent. Emits zoom_changed signal."""
         if self.pixmap_item.pixmap().isNull():
             return
         angle = event.angleDelta().y()
+        updated = False
         if angle > 0:
             factor = self.zoom_factor
             if self.current_zoom * factor <= self.max_zoom:
                 self.scale(factor, factor)
                 self.current_zoom *= factor
+                updated = True
         else:
             factor = 1.0 / self.zoom_factor
             if self.current_zoom * factor >= self.min_zoom:
                 self.scale(factor, factor)
                 self.current_zoom *= factor
+                updated = True
+        if updated:
+            self._show_feedback(f"Zoom: {self.current_zoom:.2f}x")
+            self.zoom_changed.emit(self.current_zoom)
 
     def resizeEvent(self, event) -> None:
-        """Viewport resize, refit if no zoom."""
+        """Viewport resize, refit if no zoom. Shows feedback overlay when fitted."""
         super().resizeEvent(event)
+        if not hasattr(self, 'current_zoom') or not hasattr(self, 'feedback_label'):
+            return
         if self.current_zoom == 1.0:
             self.fit_in_view()
+            self._show_feedback("Fitted")
+            self.fitted.emit()
 
-    # Drag and Drop handlers
     def dragEnterEvent(self, event) -> None:
+        """Accept drag enter if files/images. Otherwise, defer to base."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
         else:
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event) -> None:
+        """Accept drag move if files/images. Otherwise, defer to base."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
 
     def dropEvent(self, event) -> None:
+        """Handle file/image drop. Emit image_dropped, show overlay."""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
             if urls:
                 file_path = urls[0].toLocalFile()
                 if file_path.lower().endswith(self.IMAGE_EXTENSIONS):
                     self.image_dropped.emit(file_path)
+                    self._show_feedback(f"Dropped: {file_path.split('/')[-1]}")
                     event.acceptProposedAction()
                     return
         super().dropEvent(event)
+
+    def _show_feedback(self, text: str, ms: int = 1100) -> None:
+        self.feedback_label.setText(text)
+        self.feedback_label.adjustSize()
+        label_w, label_h = self.feedback_label.width(), self.feedback_label.height()
+        v_width, v_height = self.viewport().width(), self.viewport().height()
+        x = (v_width - label_w) // 2
+        y = v_height // 12
+        self.feedback_label.move(x, y)
+        self.feedback_label.setVisible(True)
+        self.feedback_label.raise_()
+        self.feedback_timer.start(ms)
+
+    def _hide_feedback(self) -> None:
+        self.feedback_label.setVisible(False)
+
+# END OF FILE
