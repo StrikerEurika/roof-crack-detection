@@ -1,3 +1,5 @@
+# src/view_model/settings_view_model.py
+
 from PySide6.QtCore import QObject, Signal
 from src.model import HistoryManager
 from src.services import SettingsService
@@ -51,6 +53,9 @@ class SettingsViewModel(QObject):
     def get_default_reports_dir(self) -> str:
         """Returns the current reports directory path."""
         return self.settings_service.hm.config.get("default_reports_dir", self.hm.reports_dir)
+
+    def get_reports_dir(self) -> str:
+        return self.hm.reports_dir
 
     def color_to_rgb(self, name: str) -> list:
         """Helper to convert color name to RGB array."""

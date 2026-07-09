@@ -1,3 +1,9 @@
+""" Context:
+- What: The InspectionView class is a QWidget that provides a user interface for analyzing roof images for cracks. 
+It allows users to select an image, configure model parameters, run detection, view results, and export reports.
+- Path: src/view/inspection_view.py
+"""
+
 import os
 import numpy as np
 from PySide6.QtWidgets import (
@@ -122,7 +128,7 @@ class InspectionView(QWidget):
         left_layout.addWidget(self.card_model)
 
         # Run Action Button
-        self.btn_run = PrimaryPushButton("⚡ RUN DETECTOR", self.panel_left)
+        self.btn_run = PrimaryPushButton("RUN DETECTOR", self.panel_left)
         self.btn_run.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_run.setEnabled(False)
         self.btn_run.clicked.connect(self.run_detection)
@@ -143,7 +149,18 @@ class InspectionView(QWidget):
 
         self.layout.addWidget(self.panel_left)
 
+    def on_zoom_changed(self, zoom: float):
+        self.viewer_status.setText(f"Current Zoom: {zoom:.2f}x")
+
+    def on_fitted(self):
+        self.viewer_status.setText(f"Status: Fit to Window")
+
     def setup_display_panel(self):
+        # Feedback label for user status (optional UI improvement)
+        self.viewer_status = QLabel(self)
+        self.viewer_status.setStyleSheet("color: #3b82f6; font-weight: bold; font-size: 13px; margin-top: 4px;")
+        self.viewer_status.setText("")
+
         self.panel_right = QWidget(self)
         right_layout = QVBoxLayout(self.panel_right)
         right_layout.setContentsMargins(0, 0, 0, 0)
@@ -155,25 +172,37 @@ class InspectionView(QWidget):
         # 1. Visualization tab
         self.viewer_vis = ImageViewer(self.tab_widget)
         self.viewer_vis.image_dropped.connect(self.on_image_dropped)
+        # Connect overlay signals for user feedback
+        self.viewer_vis.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_vis.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_vis, "🔍 Visualization Overlay")
         
         # 2. Original tab
         self.viewer_orig = ImageViewer(self.tab_widget)
+        self.viewer_orig.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_orig.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_orig, "Original Image")
         
         # 3. Transparent Overlay tab
         self.viewer_overlay = ImageViewer(self.tab_widget)
+        self.viewer_overlay.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_overlay.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_overlay, "Crack Overlay")
 
         # 4. Binary Mask tab
         self.viewer_mask = ImageViewer(self.tab_widget)
+        self.viewer_mask.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_mask.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_mask, "Binary Mask")
 
         # 5. Confidence Map tab
         self.viewer_conf = ImageViewer(self.tab_widget)
+        self.viewer_conf.zoom_changed.connect(self.on_zoom_changed)
+        self.viewer_conf.fitted.connect(self.on_fitted)
         self.tab_widget.addTab(self.viewer_conf, "Confidence Heatmap")
 
         right_layout.addWidget(self.tab_widget, stretch=4)
+        right_layout.addWidget(self.viewer_status)
 
         # Bottom Area: Results Table & Actions
         results_layout = QHBoxLayout()
@@ -236,7 +265,7 @@ class InspectionView(QWidget):
         self.view_model.report_export_failed.connect(self.on_report_export_failed)
 
     def load_settings_defaults(self):
-        config = self.view_model.hm.config
+        config = self.view_model.get_config()
         
         self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
         
@@ -294,7 +323,7 @@ class InspectionView(QWidget):
             self.btn_run.setEnabled(True)
             self.btn_export_pdf.setEnabled(False)
             self.table_cracks.setRowCount(0)
-            self.lbl_summary.setText("Image loaded. Press '⚡ RUN DETECTOR' to begin analysis.")
+            self.lbl_summary.setText("Image loaded. Press 'RUN DETECTOR' to begin analysis.")
             self.txt_status.setText(f"Loaded file: {file_path}\nReady to run detection.")
             self.tab_widget.setCurrentIndex(0)
 
@@ -326,21 +355,15 @@ class InspectionView(QWidget):
         self.tab_widget.setCurrentIndex(0)
 
     def run_detection(self):
-        pipeline_config = {
-            "model_variant": self.combo_model.currentText(),
-            "device": self.combo_device.currentText(),
-            "confidence_threshold": self.slider_thresh.value() / 100.0,
-            "patch_size": int(self.combo_patch.currentText()),
-            "overlap_ratio": self.slider_overlap.value() / 100.0,
-            "use_tta": self.chk_tta.isChecked(),
-            "use_clahe": self.chk_clahe.isChecked(),
-            "overlay_alpha": self.view_model.hm.config.get("overlay_alpha", 0.4),
-            "overlay_color": self.view_model.hm.config.get("overlay_color", [255, 0, 0]),
-            "box_color": self.view_model.hm.config.get("box_color", [0, 255, 0]),
-            "box_thickness": self.view_model.hm.config.get("box_thickness", 2),
-            "contour_color": self.view_model.hm.config.get("contour_color", [0, 0, 255]),
-            "contour_thickness": self.view_model.hm.config.get("contour_thickness", 2),
-        }
+        pipeline_config = self.view_model.build_pipeline_config(
+            model_variant=self.combo_model.currentText(),
+            device=self.combo_device.currentText(),
+            confidence_threshold=self.slider_thresh.value() / 100.0,
+            patch_size=int(self.combo_patch.currentText()),
+            overlap_ratio=self.slider_overlap.value() / 100.0,
+            use_tta=self.chk_tta.isChecked(),
+            use_clahe=self.chk_clahe.isChecked(),
+        )
         self.view_model.run_detection(pipeline_config)
 
     @Slot()

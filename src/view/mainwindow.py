@@ -5,18 +5,19 @@ from PySide6.QtCore import Slot, QFileSystemWatcher
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
 
+from src.model import HistoryManager
+from src.services import InferenceService
 from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
 from src.view import HomeView, InspectionView, BatchView, SettingsView
 
 class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
 
-    def __init__(self, history_manager, parent=None):
+    def __init__(self, app_context, parent=None):
         super().__init__(parent)
-        self.hm = history_manager
-        
-        # Cache loaded pipelines in mainwindow to share weights/sessions across tabs
-        self.model_cache = {}
+        self.context = app_context
+        self.hm = self._resolve_history_manager(app_context)
+        self.inference_service = self._resolve_inference_service(app_context)
 
         self.setWindowTitle("Roof Surface Crack Inspection Suite")
         self.resize(1280, 800)
@@ -37,18 +38,28 @@ class MainWindow(FluentWindow):
         # 4. Setup Hot-Reload Watcher for Views
         self.setup_hot_reload()
 
+    def _resolve_history_manager(self, app_context) -> HistoryManager:
+        if hasattr(app_context, "history_manager"):
+            return app_context.history_manager
+        return app_context
+
+    def _resolve_inference_service(self, app_context) -> InferenceService:
+        if hasattr(app_context, "inference_service"):
+            return app_context.inference_service
+        return InferenceService()
+
     def setup_views(self):
         # Initialize the ViewModels
-        self.home_vm = HomeViewModel(self.hm)
-        self.inspection_vm = InspectionViewModel(self.hm, self.model_cache)
-        self.batch_vm = BatchViewModel(self.hm, self.model_cache)
-        self.settings_vm = SettingsViewModel(self.hm)
+        self.home_view_model = HomeViewModel(self.hm)
+        self.inspection_view_model = InspectionViewModel(self.hm, self.inference_service)
+        self.batch_view_model = BatchViewModel(self.hm, self.inference_service)
+        self.settings_view_model = SettingsViewModel(self.hm)
 
         # Initialize the views
-        self.page_home = HomeView(self.home_vm, self)
-        self.page_single = InspectionView(self.inspection_vm, self)
-        self.page_batch = BatchView(self.batch_vm, self)
-        self.page_settings = SettingsView(self.settings_vm, self)
+        self.page_home = HomeView(self.home_view_model, self)
+        self.page_single = InspectionView(self.inspection_view_model, self)
+        self.page_batch = BatchView(self.batch_view_model, self)
+        self.page_settings = SettingsView(self.settings_view_model, self)
 
         # Set object names (crucial for QFluentWidgets navigation routing)
         self.page_home.setObjectName("homeView")
@@ -58,7 +69,7 @@ class MainWindow(FluentWindow):
 
     def setup_navigation(self):
         # Add sub-interfaces to the navigation sidebar
-        self.addSubInterface(self.page_home, FIF.HOME, "Dashboard / Home")
+        self.addSubInterface(self.page_home, FIF.HOME, "Dashboard")
         self.addSubInterface(self.page_single, FIF.ZOOM, "Single Inspection")
         self.addSubInterface(self.page_batch, FIF.FOLDER, "Batch Processing")
         
@@ -96,7 +107,7 @@ class MainWindow(FluentWindow):
     def on_view_historical_record(self, record):
         """Triggered from history list to load results and view details."""
         self.switchTo(self.page_single)
-        self.page_single.load_historical_record(record)
+        self.inspection_view_model.load_historical_record(record)
 
     @Slot()
     def on_settings_saved(self):
@@ -107,14 +118,19 @@ class MainWindow(FluentWindow):
         self.page_single.load_settings_defaults()
         self.page_batch.load_settings_defaults()
         
-        # If default settings changed, clear model cache to force reload on next runs
-        self.model_cache.clear()
+        self.inference_service.clear_cache()
 
     def setup_hot_reload(self):
-        """Sets up the filesystem watcher for all View files."""
+        """Sets up the filesystem watcher for all View files."""      
         self.watcher = QFileSystemWatcher(self)
         view_dir = os.path.dirname(os.path.abspath(__file__))
-        views_to_watch = ["home_view.py", "inspection_view.py", "batch_view.py", "settings_view.py"]
+        views_to_watch = [
+            "home_view.py", 
+            "inspection_view.py", 
+            "batch_view.py", 
+            "settings_view.py",
+            ".",
+        ]
         for view_file in views_to_watch:
             path = os.path.join(view_dir, view_file)
             if os.path.exists(path):
@@ -124,7 +140,7 @@ class MainWindow(FluentWindow):
     def hot_reload_view(self, file_path):
         """Dynamic in-place swap of modified views, preserving ViewModel state."""
         filename = os.path.basename(file_path)
-        print(f"🔥 Hot-reloading view because of modification in: {filename}")
+        print(f"Hot-reloading view because of modification in: {filename}")
         
         try:
             if filename == "home_view.py":
@@ -141,7 +157,7 @@ class MainWindow(FluentWindow):
                 # Replace in StackedWidget using addWidget to sync PopUpAniInfo correctly
                 self.stackedWidget.removeWidget(self.page_home)
                 self.page_home.deleteLater()
-                new_page = src.view.home_view.HomeView(self.home_vm, self)
+                new_page = src.view.home_view.HomeView(self.home_view_model, self)
                 new_page.setObjectName("homeView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_home = new_page
@@ -179,7 +195,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_single)
                 self.page_single.deleteLater()
-                new_page = src.view.inspection_view.InspectionView(self.inspection_vm, self)
+                new_page = src.view.inspection_view.InspectionView(self.inspection_view_model, self)
                 new_page.setObjectName("inspectionView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_single = new_page
@@ -212,7 +228,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_batch)
                 self.page_batch.deleteLater()
-                new_page = src.view.batch_view.BatchView(self.batch_vm, self)
+                new_page = src.view.batch_view.BatchView(self.batch_view_model, self)
                 new_page.setObjectName("batchView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_batch = new_page
@@ -245,7 +261,7 @@ class MainWindow(FluentWindow):
                 
                 self.stackedWidget.removeWidget(self.page_settings)
                 self.page_settings.deleteLater()
-                new_page = src.view.settings_view.SettingsView(self.settings_vm, self)
+                new_page = src.view.settings_view.SettingsView(self.settings_view_model, self)
                 new_page.setObjectName("settingsView")
                 self.stackedWidget.addWidget(new_page)
                 self.page_settings = new_page
@@ -265,10 +281,10 @@ class MainWindow(FluentWindow):
                 
                 if is_current:
                     self.switchTo(self.page_settings)
-                print("✨ SettingsView reloaded in-place successfully!")
+                print("SettingsView reloaded in-place successfully!")
 
         except Exception as e:
-            print(f"❌ Failed to hot-reload view {filename}: {e}")
+            print(f"Failed to hot-reload view {filename}: {e}")
             
         # Re-add watched path (some editors recreate files on save)
         self.watcher.addPath(file_path)

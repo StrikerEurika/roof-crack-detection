@@ -1,3 +1,11 @@
+""" Context:
++ What: 
+    - The SettingsView class is a QWidget that provides a user interface for modifying system configurations and managing the inspection database.
+    - It allows users to set default model parameters, visualization styles, and directories for saving reports. 
+    - Additionally, it provides functionality to clear the inspection history and cached data.
++ Path: src/view/settings_view.py
+"""
+
 import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFileDialog
 from PySide6.QtCore import Qt, Signal, Slot
@@ -258,7 +266,7 @@ class SettingsView(QWidget):
         self.combo_color_contour.setCurrentText(self.rgb_to_color_name(contour_color))
 
         # Reports directory
-        reports_dir = config.get("default_reports_dir", self.view_model.hm.reports_dir)
+        reports_dir = config.get("default_reports_dir", self.view_model.get_reports_dir())
         self.lbl_reports_dir.setText(f"Reports Directory: {reports_dir}")
         self.lbl_reports_dir.setToolTip(reports_dir)
 
