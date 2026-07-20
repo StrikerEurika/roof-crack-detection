@@ -11,6 +11,7 @@ from .base_service import BaseService
 @dataclass
 class ProcessedResult:
     vis_output_path: str = ""
+    overlay_output_path: str = ""
     mask_output_path: str = ""
     record: dict = field(default_factory=dict)
     crack_count: int = 0
@@ -26,8 +27,8 @@ class InspectionService(BaseService):
         base_name, _ = os.path.splitext(image_name)
 
         # Call base service method to save visualizations
-        vis_output_path, mask_output_path = self.save_image_assets(
-            base_name, results["visualization"], results["binary_mask"]
+        vis_output_path, overlay_output_path, mask_output_path = self.save_image_assets(
+            base_name, results["visualization"], results["binary_mask"], results.get("overlay")
         )
 
         crack_count = len(results["bounding_boxes"])
@@ -41,6 +42,7 @@ class InspectionService(BaseService):
             crack_count=crack_count,
             model_used=model_used,
             vis_image_path=vis_output_path,
+            overlay_image_path=overlay_output_path,
             mask_image_path=mask_output_path,
             elapsed_time=results["elapsed_time"]
         )
@@ -55,6 +57,7 @@ class InspectionService(BaseService):
 
         return ProcessedResult(
             vis_output_path=vis_output_path,
+            overlay_output_path=overlay_output_path,
             mask_output_path=mask_output_path,
             record=record,
             crack_count=crack_count,

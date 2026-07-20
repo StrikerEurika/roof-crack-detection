@@ -17,6 +17,7 @@ from qfluentwidgets import (
 )
 
 from src.view_model import SettingsViewModel
+from src import get_available_model_variants, resolve_model_variant
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility via SettingsViewModel."""
@@ -80,7 +81,7 @@ class SettingsView(QWidget):
         # Model variant
         layout.addWidget(BodyLabel("Default Model Zoo Variant:", self.group_model))
         self.combo_model = ComboBox(self.group_model)
-        self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
+        self.combo_model.addItems(get_available_model_variants())
         self.combo_model.setFixedWidth(350)
         layout.addWidget(self.combo_model)
 
@@ -243,7 +244,7 @@ class SettingsView(QWidget):
     @Slot(dict)
     def on_settings_loaded(self, config):
         # Model & device
-        self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setCurrentText(resolve_model_variant(config.get("model_variant")))
         self.combo_device.setCurrentText(config.get("device", "cuda"))
         
         # Threshold

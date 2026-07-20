@@ -19,13 +19,17 @@ class BatchService(BaseService):
 
             try:
                 # Call base service method to save visualizations to history results folder
-                vis_output_path, mask_output_path = self.save_image_assets(
-                    base_name, results_obj["visualization"], results_obj["binary_mask"]
+                vis_output_path, overlay_output_path, mask_output_path = self.save_image_assets(
+                    base_name, results_obj["visualization"], results_obj["binary_mask"], results_obj.get("overlay")
                 )
 
-                user_vis_path = os.path.join(output_dir, f"{base_name}_overlay.png")
+                user_vis_path = os.path.join(output_dir, f"{base_name}_vis.png")
+                user_overlay_path = os.path.join(output_dir, f"{base_name}_overlay.png")
                 user_mask_path = os.path.join(output_dir, f"{base_name}_mask.png")
+
                 Image.fromarray(results_obj["visualization"]).save(user_vis_path)
+                if "overlay" in results_obj and results_obj["overlay"] is not None:
+                    Image.fromarray(results_obj["overlay"]).save(user_overlay_path)
                 Image.fromarray(results_obj["binary_mask"]).save(user_mask_path)
 
                 self.hm.add_record(
@@ -35,6 +39,7 @@ class BatchService(BaseService):
                     crack_count=crack_count,
                     model_used=model_used,
                     vis_image_path=vis_output_path,
+                    overlay_image_path=overlay_output_path,
                     mask_image_path=mask_output_path,
                     elapsed_time=result["elapsed_time"]
                 )

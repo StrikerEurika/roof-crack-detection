@@ -19,7 +19,7 @@ from qfluentwidgets import (
 )
 
 from src.view_model import BatchViewModel
-from src import check_gpu_available
+from src import check_gpu_available, get_available_model_variants, resolve_model_variant
 
 class BatchView(QWidget):
     """View widget for folder-level batch roof crack detection, refactored to use BatchViewModel."""
@@ -94,7 +94,7 @@ class BatchView(QWidget):
         
         model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
         self.combo_model = ComboBox(self.card_model)
-        self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
+        self.combo_model.addItems(get_available_model_variants())
         model_layout.addWidget(self.combo_model)
         
         model_layout.addWidget(BodyLabel("Compute Device:", self.card_model))
@@ -191,7 +191,7 @@ class BatchView(QWidget):
     def load_settings_defaults(self):
         config = self.view_model.get_config()
         
-        self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setCurrentText(resolve_model_variant(config.get("model_variant")))
         
         has_gpu = check_gpu_available()
         if not has_gpu:

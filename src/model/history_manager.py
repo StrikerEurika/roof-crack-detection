@@ -28,8 +28,10 @@ class HistoryManager:
         self.history = self._load_history()
 
     def _load_config(self) -> Dict:
+        from src.services.inference_service import resolve_model_variant
+
         default_config = {
-            "model_variant": "Seg_UNET_CFD_actual_v2",
+            "model_variant": resolve_model_variant(None),
             "device": "cuda",
             "confidence_threshold": 0.5,
             "patch_size": 512,
@@ -55,6 +57,7 @@ class HistoryManager:
             except Exception as e:
                 print(f"Error loading config.json, resetting to defaults: {e}")
                 
+        default_config["model_variant"] = resolve_model_variant(default_config.get("model_variant"))
         return default_config
 
     def save_config(self, new_config: Dict = None) -> bool:
@@ -88,7 +91,7 @@ class HistoryManager:
 
     def add_record(self, image_path: str, crack_detected: bool, 
                    confidence: float, crack_count: int, model_used: str,
-                   vis_image_path: str = None, mask_image_path: str = None,
+                   vis_image_path: str = None, overlay_image_path: str = None, mask_image_path: str = None,
                    elapsed_time: float = 0.0, bounding_boxes: List[Dict[str, Any]] = None) -> Dict:
         """Adds an inspection record and saves history."""
         record_id = str(uuid.uuid4())
@@ -102,6 +105,7 @@ class HistoryManager:
             "crack_count": int(crack_count),
             "model_used": model_used,
             "vis_image_path": vis_image_path,
+            "overlay_image_path": overlay_image_path,
             "mask_image_path": mask_image_path,
             "elapsed_time": float(elapsed_time),
             "report_path": "",
@@ -122,7 +126,7 @@ class HistoryManager:
         if found_idx != -1:
             rec = self.history.pop(found_idx)
             # Remove associated result files if they exist
-            for key in ["vis_image_path", "mask_image_path"]:
+            for key in ["vis_image_path", "overlay_image_path", "mask_image_path"]:
                 path = rec.get(key)
                 if path and os.path.exists(path):
                     try:

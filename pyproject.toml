@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "albumentations>=1.4.24",
     "findcrack>=0.1.5",
     "pillow>=12.3.0",
     "pyside6>=6.11.1",

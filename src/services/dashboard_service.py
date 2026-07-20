@@ -30,7 +30,9 @@ class DashboardService:
             else 0.0
         )
 
-        active_model = config.get("model_variant", "Seg_UNET_CFD_actual_v2")
+        from src.services.inference_service import resolve_model_variant
+
+        active_model = resolve_model_variant(config.get("model_variant"))
         active_model_abbr = active_model.split("_")[0]
 
         return DashboardKPIs(

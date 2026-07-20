@@ -130,6 +130,7 @@ class BatchViewModel(QObject):
 
 def config_model_used(results_obj) -> str:
     """Helper to extract model_used safely."""
+    from src.services.inference_service import resolve_model_variant
     if results_obj:
-        return results_obj.get("model_used", "Seg_UNET_CFD_actual_v2")
-    return "Seg_UNET_CFD_actual_v2"
+        return resolve_model_variant(results_obj.get("model_used"))
+    return resolve_model_variant(None)

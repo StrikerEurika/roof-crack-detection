@@ -21,7 +21,7 @@ from qfluentwidgets import (
 
 from src.view.components.image_viewer import ImageViewer
 from src.view_model import InspectionViewModel
-from src import check_gpu_available
+from src import check_gpu_available, get_available_model_variants, resolve_model_variant
 
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results, refactored to use InspectionViewModel."""
@@ -87,7 +87,7 @@ class InspectionView(QWidget):
         # Model selector
         model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
         self.combo_model = ComboBox(self.card_model)
-        self.combo_model.addItems(["Seg_UNET_CFD_actual_v2", "Seg_UNET_CFD_actual_v1", "Det_YOLOv26n-seg_crack-dataset_v1"])
+        self.combo_model.addItems(get_available_model_variants())
         model_layout.addWidget(self.combo_model)
         
         # Device selector
@@ -267,7 +267,7 @@ class InspectionView(QWidget):
     def load_settings_defaults(self):
         config = self.view_model.get_config()
         
-        self.combo_model.setCurrentText(config.get("model_variant", "Seg_UNET_CFD_actual_v2"))
+        self.combo_model.setCurrentText(resolve_model_variant(config.get("model_variant")))
         
         has_gpu = check_gpu_available()
         if not has_gpu:
@@ -343,7 +343,10 @@ class InspectionView(QWidget):
         vis_path = record.get("vis_image_path")
         if vis_path and os.path.exists(vis_path):
             self.viewer_vis.set_image(QPixmap(vis_path))
-            self.viewer_overlay.set_image(QPixmap(vis_path))
+            
+        overlay_path = record.get("overlay_image_path") or vis_path
+        if overlay_path and os.path.exists(overlay_path):
+            self.viewer_overlay.set_image(QPixmap(overlay_path))
             
         mask_path = record.get("mask_image_path")
         if mask_path and os.path.exists(mask_path):

@@ -32,10 +32,54 @@ def check_gpu_available() -> bool:
     return False
 
 
+try:
+    from findcrack import list_models
+except ImportError:
+    def list_models():
+        return ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]
+
+LEGACY_VARIANT_MAP = {
+    "Det_YOLOv26n-seg_crack-dataset_v1": "Seg_YOLO26n-seg-v1_crack-seg",
+    "Seg_UNET_CFD_actual_v2": "Seg_Unet-v1_CFD",
+    "Seg_UNET_CFD_actual_v1": "Seg_Unet-v1_CFD",
+}
+
+
+def get_available_model_variants() -> list[str]:
+    """Returns the list of valid model variants registered in findcrack."""
+    try:
+        models = list_models()
+        if models and isinstance(models, list):
+            return models
+    except Exception:
+        pass
+    return ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]
+
+
+def resolve_model_variant(variant: str | None) -> str:
+    """
+    Resolves legacy variant names to their findcrack equivalent,
+    and validates against available findcrack model variants.
+    """
+    available = get_available_model_variants()
+    if not variant:
+        return available[0]
+
+    if variant in LEGACY_VARIANT_MAP:
+        mapped = LEGACY_VARIANT_MAP[variant]
+        if mapped in available:
+            return mapped
+
+    if variant in available:
+        return variant
+
+    return available[0]
+
+
 class InferenceService:
     """Owns model pipeline loading, cache updates, and inference result shaping."""
 
-    DEFAULT_VARIANT = "Seg_UNET_CFD_actual_v2"
+    DEFAULT_VARIANT = "Seg_Unet-v1_CFD"
 
     def __init__(self, model_cache: dict | None = None):
         self.model_cache = model_cache if model_cache is not None else {}
@@ -44,7 +88,7 @@ class InferenceService:
         self.model_cache.clear()
 
     def get_variant(self, config: dict) -> str:
-        return config.get("model_variant", self.DEFAULT_VARIANT)
+        return resolve_model_variant(config.get("model_variant", self.DEFAULT_VARIANT))
 
     def get_pipeline(self, config: dict):
         variant = self.get_variant(config)
