@@ -1,5 +1,5 @@
 {
-    "model_variant": "Seg_UNET_CFD_actual_v2",
+    "model_variant": "Seg_Unet-v1_CFD",
     "device": "cuda",
     "confidence_threshold": 0.5,
     "patch_size": 512,
