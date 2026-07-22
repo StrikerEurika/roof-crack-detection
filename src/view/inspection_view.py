@@ -95,7 +95,8 @@ class InspectionView(QWidget):
         # Model selector
         model_layout.addWidget(BodyLabel("Pre-trained Model Zoo:", self.card_model))
         self.combo_model = ComboBox(self.card_model)
-        self.combo_model.addItems(get_available_model_variants())
+        self.rebuild_model_combo()
+        self.combo_model.currentIndexChanged.connect(self.on_model_selection_changed)
         model_layout.addWidget(self.combo_model)
         
         # Device selector
@@ -276,7 +277,14 @@ class InspectionView(QWidget):
     def load_settings_defaults(self):
         config = self.view_model.get_config()
         
-        self.combo_model.setCurrentText(resolve_model_variant(config.get("model_variant")))
+        variant_key = resolve_model_variant(config.get("model_variant"))
+        found_idx = 0
+        for i in range(self.combo_model.count()):
+            data = self.combo_model.itemData(i)
+            if isinstance(data, dict) and data.get("key") == variant_key:
+                found_idx = i
+                break
+        self.combo_model.setCurrentIndex(found_idx)
         
         has_gpu = check_gpu_available()
         if not has_gpu:
@@ -367,8 +375,10 @@ class InspectionView(QWidget):
         self.tab_widget.setCurrentIndex(0)
 
     def run_detection(self):
+        model_data = self.combo_model.currentData()
+        model_variant = model_data.get("key") if isinstance(model_data, dict) else self.combo_model.currentText()
         pipeline_config = self.view_model.build_pipeline_config(
-            model_variant=self.combo_model.currentText(),
+            model_variant=model_variant,
             device=self.combo_device.currentText(),
             confidence_threshold=self.slider_thresh.value() / 100.0,
             patch_size=int(self.combo_patch.currentText()),
@@ -377,6 +387,73 @@ class InspectionView(QWidget):
             use_clahe=self.chk_clahe.isChecked(),
         )
         self.view_model.run_detection(pipeline_config)
+
+    def rebuild_model_combo(self):
+        self.combo_model.clear()
+        variants = get_available_model_variants()
+        from PySide6.QtCore import Qt
+        for entry in variants:
+            icon = None
+            tooltip = None
+            if entry["status"] == "downloadable":
+                icon = FIF.DOWNLOAD
+                tooltip = "Model not installed. Click to download."
+            elif entry["status"] == "unavailable":
+                icon = FIF.BLOCK
+                tooltip = "Model not available for download."
+            label = entry["display_name"]
+            if icon:
+                self.combo_model.addItem(icon, label, userData=entry)
+            else:
+                self.combo_model.addItem(label, userData=entry)
+            idx = self.combo_model.count() - 1
+            if tooltip:
+                self.combo_model.setItemData(idx, tooltip, Qt.ToolTipRole)
+            if entry["status"] == "unavailable":
+                self.combo_model.model().item(idx).setEnabled(False)
+
+    # Handler to trigger download if needed
+    @Slot(int)
+    def on_model_selection_changed(self, idx):
+        item = self.combo_model.itemData(idx, Qt.UserRole)
+        if not item or not isinstance(item, dict):
+            return
+        if item.get("status") == "downloadable":
+            from findcrack import load_model
+            from qfluentwidgets import InfoBar
+            try:
+                InfoBar.info(
+                    title="Model Download",
+                    content=f"Downloading model: {item['display_name']}...",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+                load_model(item["key"], device="cpu", force_download=True)
+                InfoBar.success(
+                    title="Download Complete",
+                    content=f"Download complete for {item['display_name']}",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+            except Exception as e:
+                InfoBar.error(
+                    title="Download Failed",
+                    content=f"Model download failed: {e}",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=4000,
+                    parent=self
+                )
+            # After download attempt, reload the ComboBox
+            self.rebuild_model_combo()
+            self.combo_model.setCurrentIndex(idx)
 
     @Slot()
     def on_detection_started(self):

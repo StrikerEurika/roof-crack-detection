@@ -81,9 +81,11 @@ class SettingsView(QWidget):
         # Model variant
         layout.addWidget(BodyLabel("Default Model Zoo Variant:", self.group_model))
         self.combo_model = ComboBox(self.group_model)
-        self.combo_model.addItems(get_available_model_variants())
+        # Add models with decorated UI
+        self.rebuild_model_combo()
         self.combo_model.setFixedWidth(350)
         layout.addWidget(self.combo_model)
+        self.combo_model.currentIndexChanged.connect(self.on_model_selection_changed)
 
         # Compute device
         layout.addWidget(BodyLabel("Default Compute Device:", self.group_model))
@@ -105,6 +107,73 @@ class SettingsView(QWidget):
         layout.addLayout(slider_layout)
 
         self.scroll_layout.addWidget(self.group_model)
+
+    def rebuild_model_combo(self):
+        self.combo_model.clear()
+        variants = get_available_model_variants()
+        from PySide6.QtCore import Qt
+        for entry in variants:
+            icon = None
+            tooltip = None
+            if entry["status"] == "downloadable":
+                icon = FIF.DOWNLOAD
+                tooltip = "Model not installed. Click to download."
+            elif entry["status"] == "unavailable":
+                icon = FIF.BLOCK
+                tooltip = "Model not available for download."
+            label = entry["display_name"]
+            if icon:
+                self.combo_model.addItem(icon, label, userData=entry)
+            else:
+                self.combo_model.addItem(label, userData=entry)
+            idx = self.combo_model.count() - 1
+            if tooltip:
+                self.combo_model.setItemData(idx, tooltip, Qt.ToolTipRole)
+            if entry["status"] == "unavailable":
+                self.combo_model.model().item(idx).setEnabled(False)
+
+    # Handler to trigger download if needed
+    @Slot(int)
+    def on_model_selection_changed(self, idx):
+        item = self.combo_model.itemData(idx, Qt.UserRole)
+        if not item or not isinstance(item, dict):
+            return
+        if item.get("status") == "downloadable":
+            from findcrack import load_model
+            from qfluentwidgets import InfoBar
+            try:
+                InfoBar.info(
+                    title="Model Download",
+                    content=f"Downloading model: {item['display_name']}...",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+                load_model(item["key"], device="cpu", force_download=True)
+                InfoBar.success(
+                    title="Download Complete",
+                    content=f"Download complete for {item['display_name']}",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+            except Exception as e:
+                InfoBar.error(
+                    title="Download Failed",
+                    content=f"Model download failed: {e}",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=4000,
+                    parent=self
+                )
+            # After download attempt, reload the ComboBox
+            self.rebuild_model_combo()
+            self.combo_model.setCurrentIndex(idx)
 
     def setup_visualization_styles(self):
         self.group_vis = SimpleCardWidget(self)
@@ -244,7 +313,14 @@ class SettingsView(QWidget):
     @Slot(dict)
     def on_settings_loaded(self, config):
         # Model & device
-        self.combo_model.setCurrentText(resolve_model_variant(config.get("model_variant")))
+        variant_key = resolve_model_variant(config.get("model_variant"))
+        found_idx = 0
+        for i in range(self.combo_model.count()):
+            data = self.combo_model.itemData(i)
+            if isinstance(data, dict) and data.get("key") == variant_key:
+                found_idx = i
+                break
+        self.combo_model.setCurrentIndex(found_idx)
         self.combo_device.setCurrentText(config.get("device", "cuda"))
         
         # Threshold
@@ -272,8 +348,10 @@ class SettingsView(QWidget):
         self.lbl_reports_dir.setToolTip(reports_dir)
 
     def save_settings(self):
+        model_data = self.combo_model.currentData()
+        model_variant = model_data.get("key") if isinstance(model_data, dict) else self.combo_model.currentText()
         new_config = {
-            "model_variant": self.combo_model.currentText(),
+            "model_variant": model_variant,
             "device": self.combo_device.currentText(),
             "confidence_threshold": self.slider_thresh.value() / 100.0,
             "overlay_alpha": self.slider_alpha.value() / 100.0,

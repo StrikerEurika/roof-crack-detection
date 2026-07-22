@@ -45,35 +45,65 @@ LEGACY_VARIANT_MAP = {
 }
 
 
-def get_available_model_variants() -> list[str]:
-    """Returns the list of valid model variants registered in findcrack."""
+def get_available_model_variants() -> list:
+    """
+    Returns the list of model variants with status info for UI (dict entries: key, display_name, status).
+    """
     try:
-        models = list_models()
-        if models and isinstance(models, list):
-            return models
+        from findcrack import get_model_status_map
+        model_map = get_model_status_map()
+        result = []
+        for k, info in model_map.items():
+            result.append({
+                "key": k,
+                "display_name": info["display_name"],
+                "status": info["status"],
+                "backend": info.get("backend"),
+                "url": info.get("url"),
+                "local_path": info.get("local_path"),
+                "sha256": info.get("sha256")
+            })
+        return result
     except Exception:
         pass
-    return ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]
+    # fallback: old static list of just names
+    return [{"key": x, "display_name": x, "status": "available"} for x in ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]]
 
 
-def resolve_model_variant(variant: str | None) -> str:
+def resolve_model_variant(variant: str | dict | None) -> str:
     """
     Resolves legacy variant names to their findcrack equivalent,
     and validates against available findcrack model variants.
     """
     available = get_available_model_variants()
+    
+    # Extract key if variant is a dictionary
+    if isinstance(variant, dict):
+        variant = variant.get("key")
+        
+    # Get all valid keys from available variants
+    valid_keys = []
+    for entry in available:
+        if isinstance(entry, dict):
+            valid_keys.append(entry.get("key"))
+        else:
+            valid_keys.append(entry)
+
+    if not valid_keys:
+        return ""
+
     if not variant:
-        return available[0]
+        return valid_keys[0]
 
     if variant in LEGACY_VARIANT_MAP:
         mapped = LEGACY_VARIANT_MAP[variant]
-        if mapped in available:
+        if mapped in valid_keys:
             return mapped
 
-    if variant in available:
+    if variant in valid_keys:
         return variant
 
-    return available[0]
+    return valid_keys[0]
 
 
 class InferenceService:
