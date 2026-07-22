@@ -1,5 +1,11 @@
 # Roof Surface Crack Inspection Suite
 
+
+<div align="center">
+    <img src="./assets/icons/icons-05.png" alt="Roof Surface Crack Inspection Suite" width="200"/>
+</div>
+
+
 An enterprise-grade desktop application built with **PySide6** and **Python** for executing, visualizing, and reporting AI-powered roof crack detection. The app integrates neural network models from the `findcrack` library (supporting U-Net and YOLO architectures) and executes CPU/GPU inference asynchronously.
 
 ---
