@@ -14,3 +14,8 @@ dependencies = [
 
 [tool.uv.sources]
 findcrack = { path = "../findcrack", editable = true }
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.21.0",
+]

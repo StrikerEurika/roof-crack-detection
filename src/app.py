@@ -20,7 +20,11 @@ class AppContext:
 
 
 def get_project_root() -> str:
+    import sys
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 
 def create_context(project_root: str | None = None) -> AppContext:

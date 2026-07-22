@@ -290,7 +290,7 @@ class InspectionView(QWidget):
         if not has_gpu:
             self.combo_device.setCurrentText("cpu")
         else:
-            self.combo_device.setCurrentText(config.get("device", "cuda"))
+            self.combo_device.setCurrentText(config.get("device", "cpu"))
 
         self.slider_thresh.setValue(int(config.get("confidence_threshold", 0.5) * 100))
         self.lbl_thresh.setText(f"Confidence Threshold: {config.get('confidence_threshold', 0.5):.2f}")
@@ -403,7 +403,7 @@ class InspectionView(QWidget):
                 tooltip = "Model not available for download."
             label = entry["display_name"]
             if icon:
-                self.combo_model.addItem(icon, label, userData=entry)
+                self.combo_model.addItem(label, icon, userData=entry)
             else:
                 self.combo_model.addItem(label, userData=entry)
             idx = self.combo_model.count() - 1

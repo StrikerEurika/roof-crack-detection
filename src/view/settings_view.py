@@ -123,7 +123,7 @@ class SettingsView(QWidget):
                 tooltip = "Model not available for download."
             label = entry["display_name"]
             if icon:
-                self.combo_model.addItem(icon, label, userData=entry)
+                self.combo_model.addItem(label, icon, userData=entry)
             else:
                 self.combo_model.addItem(label, userData=entry)
             idx = self.combo_model.count() - 1
@@ -321,7 +321,7 @@ class SettingsView(QWidget):
                 found_idx = i
                 break
         self.combo_model.setCurrentIndex(found_idx)
-        self.combo_device.setCurrentText(config.get("device", "cuda"))
+        self.combo_device.setCurrentText(config.get("device", "cpu"))
         
         # Threshold
         thresh = int(config.get("confidence_threshold", 0.5) * 100)

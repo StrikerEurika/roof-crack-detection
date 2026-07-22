@@ -127,6 +127,9 @@ class MainWindow(FluentWindow):
 
     def setup_hot_reload(self):
         """Sets up the filesystem watcher for all View files."""      
+        import sys
+        if getattr(sys, "frozen", False):
+            return
         self.watcher = QFileSystemWatcher(self)
         view_dir = os.path.dirname(os.path.abspath(__file__))
         views_to_watch = [
@@ -141,6 +144,7 @@ class MainWindow(FluentWindow):
             if os.path.exists(path):
                 self.watcher.addPath(path)
         self.watcher.fileChanged.connect(self.hot_reload_view)
+
 
     def hot_reload_view(self, file_path):
         """Dynamic in-place swap of modified views, preserving ViewModel state."""

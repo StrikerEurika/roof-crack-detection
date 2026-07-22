@@ -10,16 +10,22 @@ class HistoryManager:
     """Manages system configuration and inspection history database."""
     
     def __init__(self, workspace_dir: str):
-        self.workspace_dir = workspace_dir
-        self.settings_dir = os.path.join(workspace_dir, "settings")
-        self.assets_dir = os.path.join(workspace_dir, "assets")
+        import sys
+        if getattr(sys, "frozen", False):
+            self.workspace_dir = os.path.join(os.path.expanduser("~"), ".roof-crack-detection")
+        else:
+            self.workspace_dir = workspace_dir
+            
+        self.settings_dir = os.path.join(self.workspace_dir, "settings")
+        self.assets_dir = os.path.join(self.workspace_dir, "assets")
         self.results_dir = os.path.join(self.assets_dir, "results")
-        self.reports_dir = os.path.join(workspace_dir, "reports")
+        self.reports_dir = os.path.join(self.workspace_dir, "reports")
         
         # Create directories if they do not exist
         os.makedirs(self.settings_dir, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
         os.makedirs(self.reports_dir, exist_ok=True)
+
         
         self.config_path = os.path.join(self.settings_dir, "config.json")
         self.history_path = os.path.join(self.settings_dir, "history.json")
@@ -32,7 +38,7 @@ class HistoryManager:
 
         default_config = {
             "model_variant": resolve_model_variant(None),
-            "device": "cuda",
+            "device": "cpu",
             "confidence_threshold": 0.5,
             "patch_size": 512,
             "overlap_ratio": 0.2,
