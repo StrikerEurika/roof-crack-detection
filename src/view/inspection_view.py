@@ -7,7 +7,8 @@ It allows users to select an image, configure model parameters, run detection, v
 import os
 import numpy as np
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem, QLabel
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QHeaderView, QAbstractItemView, QTableWidgetItem, QLabel,
+    QScrollArea
 )
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt, Signal, Slot, QRectF
@@ -50,8 +51,15 @@ class InspectionView(QWidget):
         self.load_settings_defaults()
 
     def setup_control_panel(self):
-        self.panel_left = QWidget(self)
-        self.panel_left.setFixedWidth(300)
+        self.panel_left_scroll = QScrollArea(self)
+        self.panel_left_scroll.setFixedWidth(300)
+        self.panel_left_scroll.setWidgetResizable(True)
+        self.panel_left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.panel_left_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.panel_left_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+
+        self.panel_left = QWidget()
+        self.panel_left.setStyleSheet("background: transparent;")
         left_layout = QVBoxLayout(self.panel_left)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(16)
@@ -147,7 +155,8 @@ class InspectionView(QWidget):
         left_layout.addWidget(self.txt_status)
         left_layout.addStretch()
 
-        self.layout.addWidget(self.panel_left)
+        self.panel_left_scroll.setWidget(self.panel_left)
+        self.layout.addWidget(self.panel_left_scroll)
 
     def on_zoom_changed(self, zoom: float):
         self.viewer_status.setText(f"Current Zoom: {zoom:.2f}x")
