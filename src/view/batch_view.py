@@ -408,10 +408,8 @@ class BatchView(QWidget):
             else:
                 self.combo_model.addItem(label, userData=entry)
             idx = self.combo_model.count() - 1
-            if tooltip:
-                self.combo_model.setItemData(idx, tooltip, Qt.ToolTipRole)
             if entry["status"] == "unavailable":
-                self.combo_model.model().item(idx).setEnabled(False)
+                self.combo_model.setItemEnabled(idx, False)
 
     # Handler to trigger download if needed
     @Slot(int)
