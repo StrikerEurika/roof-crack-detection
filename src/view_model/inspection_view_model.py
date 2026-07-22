@@ -99,7 +99,12 @@ class InspectionViewModel(QObject):
     @Slot(dict)
     def _on_inference_completed(self, results):
         """Handles completion of the inference, saves result assets, and updates history database."""
-        self.latest_result = results
+        # Store only lightweight metadata in latest_result to prevent keeping heavy numpy arrays in RAM
+        self.latest_result = {
+            "bounding_boxes": results.get("bounding_boxes", []),
+            "model_used": results.get("model_used"),
+            "elapsed_time": results.get("elapsed_time")
+        }
         
         try:
             processed = self.inspection_service.save_and_record_results(

@@ -74,7 +74,7 @@ class BatchViewModel(QObject):
 
         self.batch_started.emit()
 
-        self.active_worker = BatchWorker(config_dict, self.input_dir, self.output_dir, self.inference_service)
+        self.active_worker = BatchWorker(config_dict, self.input_dir, self.output_dir, self.inference_service, self.batch_service)
         self.active_worker.started_signal.connect(self._on_batch_started)
         self.active_worker.progress_signal.connect(self.batch_progress.emit)
         self.active_worker.file_completed_signal.connect(self._on_file_completed)
@@ -96,22 +96,7 @@ class BatchViewModel(QObject):
     @Slot(dict)
     def _on_file_completed(self, result):
         """Handles completion of a single file in batch. Saves copies and adds history record."""
-        if "error" in result:
-            self.file_completed.emit(result)
-            return
-
-        results_obj = result.get("results_object")
-        model_used = config_model_used(results_obj)
-        
-        try:
-            # Delegate to BatchService to save assets and log history record
-            updated_result = self.batch_service.save_and_record_file_result(
-                result, self.output_dir, model_used
-            )
-            self.file_completed.emit(updated_result)
-        except Exception as e:
-            self.batch_progress.emit(-1, -1, f"Warning: Failed to save result copies for {result.get('filename', 'N/A')}: {e}")
-            self.file_completed.emit(result)
+        self.file_completed.emit(result)
 
     @Slot(list)
     def _on_batch_finished(self, summary_list):

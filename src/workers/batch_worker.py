@@ -15,12 +15,13 @@ class BatchWorker(QThread):
     error_signal = Signal(str)
     cancelled_signal = Signal()
 
-    def __init__(self, pipeline_config: dict, input_dir: str, output_dir: str, inference_service: InferenceService):
+    def __init__(self, pipeline_config: dict, input_dir: str, output_dir: str, inference_service: InferenceService, batch_service=None):
         super().__init__()
         self.config = pipeline_config
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.inference_service = inference_service
+        self.batch_service = batch_service
         self._is_cancelled = False
         self.valid_extensions = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
 
@@ -64,6 +65,15 @@ class BatchWorker(QThread):
                 try:
                     results, elapsed = self.inference_service.run_pipeline(pipeline, self.config, image_path)
                     file_result = self.inference_service.summarize_result(filename, image_path, results, elapsed)
+                    
+                    if self.batch_service is not None:
+                        from src.services.inference_service import resolve_model_variant
+                        model_used = resolve_model_variant(results.get("model_used"))
+                        file_result = self.batch_service.save_and_record_file_result(
+                            file_result, self.output_dir, model_used
+                        )
+                        if "results_object" in file_result:
+                            del file_result["results_object"]
                     
                     self.file_completed_signal.emit(file_result)
                     

@@ -1,6 +1,7 @@
 import os
 import importlib
 from PySide6.QtCore import Slot, QFileSystemWatcher
+from PySide6.QtGui import QIcon, QPixmap
 
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 from qfluentwidgets import FluentIcon as FIF
@@ -22,6 +23,9 @@ class MainWindow(FluentWindow):
         self.setWindowTitle("Roof Surface Crack Inspection Suite")
         self.resize(1280, 800)
         self.setMinimumSize(1024, 700)
+        
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "icons", "icons-05.png")
+        self.setWindowIcon(QIcon(QPixmap(icon_path)))
 
         # 1. Setup Central Views and ViewModels
         self.setup_views()

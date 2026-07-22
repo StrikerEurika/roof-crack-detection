@@ -3,6 +3,7 @@ import sys
 from dataclasses import dataclass
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon, QPixmap
 
 from src.model import HistoryManager
 from src.services import InferenceService
@@ -31,6 +32,9 @@ def create_context(project_root: str | None = None) -> AppContext:
 
 def create_application(argv: list[str] | None = None) -> QApplication:
     app = QApplication(argv or sys.argv)
+    icon_path = os.path.join(get_project_root(), "assets/icons", "icon-05.png")
+    app.setWindowIcon(QIcon(icon_path))
+
     app.setApplicationName("Roof Crack Inspection Suite")
     app.setOrganizationName("Material AI Labs")
     return app
