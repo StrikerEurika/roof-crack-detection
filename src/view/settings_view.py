@@ -133,7 +133,7 @@ class SettingsView(QWidget):
     # Handler to trigger download if needed
     @Slot(int)
     def on_model_selection_changed(self, idx):
-        item = self.combo_model.itemData(idx, Qt.UserRole)
+        item = self.combo_model.itemData(idx)
         if not item or not isinstance(item, dict):
             return
         if item.get("status") == "downloadable":
