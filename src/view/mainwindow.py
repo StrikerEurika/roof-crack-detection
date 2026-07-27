@@ -99,6 +99,7 @@ class MainWindow(FluentWindow):
         self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
         self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
         self.page_settings.settings_saved.connect(self.on_settings_saved)
+        self.settings_view_model.history_cleared.connect(self.on_history_cleared)
 
         # Auto-refresh when current tab switches back to dashboard page
         self.stackedWidget.currentChanged.connect(self.on_current_changed)
@@ -113,6 +114,14 @@ class MainWindow(FluentWindow):
         """Triggered from history list to load results and view details."""
         self.switchTo(self.page_single)
         self.inspection_view_model.load_historical_record(record)
+
+    @Slot()
+    def on_history_cleared(self):
+        """Resets loaded inspection views and clears memory caches when history is cleared."""
+        self.inspection_view_model.clear_inspection()
+        self.page_home.thumbnail_cache.clear()
+        self.page_home.refresh_dashboard()
+        self.inference_service.clear_cache()
 
     @Slot()
     def on_settings_saved(self):

@@ -267,6 +267,7 @@ class InspectionView(QWidget):
     def connect_view_model(self):
         self.view_model.image_loaded.connect(self.on_image_loaded)
         self.view_model.record_loaded.connect(self.on_record_loaded)
+        self.view_model.inspection_cleared.connect(self.on_inspection_cleared)
         self.view_model.detection_started.connect(self.on_detection_started)
         self.view_model.detection_progress.connect(self.on_detection_progress)
         self.view_model.detection_finished.connect(self.on_detection_finished)
@@ -372,6 +373,25 @@ class InspectionView(QWidget):
         self.table_cracks.setRowCount(0)
         self.lbl_summary.setText(f"Loaded history run: {record.get('model_used')}.\nCracks detected: {record.get('crack_count')}.")
         self.txt_status.setText(f"Loaded historical record from {record.get('timestamp')}")
+        self.tab_widget.setCurrentIndex(0)
+
+    @Slot()
+    def on_inspection_cleared(self):
+        self.current_image_path = None
+        self.lbl_filename.setText("No image file loaded")
+        self.lbl_filename.setToolTip("")
+        
+        self.viewer_orig.clear()
+        self.viewer_vis.clear()
+        self.viewer_overlay.clear()
+        self.viewer_mask.clear()
+        self.viewer_conf.clear()
+        
+        self.btn_run.setEnabled(False)
+        self.btn_export_pdf.setEnabled(False)
+        self.table_cracks.setRowCount(0)
+        self.lbl_summary.setText("Run Status: No current inspection.")
+        self.txt_status.setText("Load a roof image file to begin analysis.")
         self.tab_widget.setCurrentIndex(0)
 
     def run_detection(self):

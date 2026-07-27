@@ -19,6 +19,7 @@ class InspectionViewModel(QObject):
     detection_error = Signal(str)
     report_exported = Signal(str)
     report_export_failed = Signal(str)
+    inspection_cleared = Signal()
 
     def __init__(self, history_manager: HistoryManager, inference_service: InferenceService, parent=None):
         super().__init__(parent)
@@ -29,6 +30,13 @@ class InspectionViewModel(QObject):
         self.current_image_path = None
         self.latest_result = None
         self.latest_record = None
+
+    def clear_inspection(self):
+        """Resets loaded image, results, and active record state."""
+        self.current_image_path = None
+        self.latest_result = None
+        self.latest_record = None
+        self.inspection_cleared.emit()
 
     def load_image(self, file_path: str):
         """Loads a target image file and resets results state."""
@@ -45,14 +53,12 @@ class InspectionViewModel(QObject):
         """Loads historical record state directly into the ViewModel."""
         self.current_image_path = record.get("image_path")
         
-        
         # Reconstruct latest_result so the View can use bounding boxes for zooming
         self.latest_result = {
             "bounding_boxes": record.get("bounding_boxes", [])
         }
         
         self.latest_record = record
-        self.latest_result = None
         self.record_loaded.emit(record)
 
     def get_config(self) -> dict:

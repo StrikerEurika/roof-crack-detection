@@ -23,14 +23,30 @@ class BatchService(BaseService):
                     base_name, results_obj["visualization"], results_obj["binary_mask"], results_obj.get("overlay")
                 )
 
-                user_vis_path = os.path.join(output_dir, f"{base_name}_vis.png")
-                user_overlay_path = os.path.join(output_dir, f"{base_name}_overlay.png")
+                user_vis_path = os.path.join(output_dir, f"{base_name}_vis.jpg")
                 user_mask_path = os.path.join(output_dir, f"{base_name}_mask.png")
 
-                Image.fromarray(results_obj["visualization"]).save(user_vis_path)
+                vis_img = Image.fromarray(results_obj["visualization"])
+                if vis_img.mode != "RGB":
+                    vis_img = vis_img.convert("RGB")
+                vis_img.save(user_vis_path, "JPEG", quality=88, optimize=False)
+
                 if "overlay" in results_obj and results_obj["overlay"] is not None:
-                    Image.fromarray(results_obj["overlay"]).save(user_overlay_path)
-                Image.fromarray(results_obj["binary_mask"]).save(user_mask_path)
+                    overlay_arr = results_obj["overlay"]
+                    has_alpha = len(overlay_arr.shape) == 3 and overlay_arr.shape[2] == 4
+                    user_overlay_path = os.path.join(output_dir, f"{base_name}_overlay.{'png' if has_alpha else 'jpg'}")
+                    overlay_img = Image.fromarray(overlay_arr)
+                    if has_alpha:
+                        overlay_img.save(user_overlay_path, "PNG", compress_level=1)
+                    else:
+                        if overlay_img.mode != "RGB":
+                            overlay_img = overlay_img.convert("RGB")
+                        overlay_img.save(user_overlay_path, "JPEG", quality=88, optimize=False)
+
+                mask_img = Image.fromarray(results_obj["binary_mask"])
+                if mask_img.mode not in ("L", "1"):
+                    mask_img = mask_img.convert("L")
+                mask_img.save(user_mask_path, "PNG", compress_level=1)
 
                 self.hm.add_record(
                     image_path=result["image_path"],

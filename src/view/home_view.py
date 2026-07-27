@@ -7,8 +7,8 @@
 import os
 from datetime import datetime
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QHeaderView, QAbstractItemView, QTableWidgetItem
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtGui import QPixmap, QImageReader
+from PySide6.QtCore import Qt, Signal, Slot, QSize
 
 from qfluentwidgets import (
     SimpleCardWidget, TitleLabel, SubtitleLabel, LargeTitleLabel,
@@ -195,6 +195,14 @@ class HomeView(QWidget):
         recent_records = stats["recent_records"]
         history = stats["full_history"]
 
+        # Prune stale thumbnail cache entries
+        valid_paths = set()
+        for rec in history:
+            p = rec.get("vis_image_path") or rec.get("image_path")
+            if p:
+                valid_paths.add(p)
+        self.thumbnail_cache = {p: pix for p, pix in self.thumbnail_cache.items() if p in valid_paths and os.path.exists(p)}
+
         # 1. Update KPIs
         self.lbl_total_val.setText(str(total_inspected))
         self.lbl_cracks_val.setText(f"{cracks_detected} ({crack_rate:.1f}%)")
@@ -229,11 +237,24 @@ class HomeView(QWidget):
                 if img_path in self.thumbnail_cache:
                     thumb_label.setPixmap(self.thumbnail_cache[img_path])
                 else:
-                    pix = QPixmap(img_path)
-                    if not pix.isNull():
-                        scaled_pix = pix.scaled(64, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                        self.thumbnail_cache[img_path] = scaled_pix
-                        thumb_label.setPixmap(scaled_pix)
+                    reader = QImageReader(img_path)
+                    reader.setAutoTransform(True)
+                    orig_size = reader.size()
+                    if not orig_size.isEmpty():
+                        # Scale down proportionally to fit 64x48 thumbnail
+                        scaled_size = orig_size.scaled(QSize(64, 48), Qt.AspectRatioMode.KeepAspectRatio)
+                        reader.setScaledSize(scaled_size)
+                        q_img = reader.read()
+                        if not q_img.isNull():
+                            pix = QPixmap.fromImage(q_img)
+                            self.thumbnail_cache[img_path] = pix
+                            thumb_label.setPixmap(pix)
+                    else:
+                        pix = QPixmap(img_path)
+                        if not pix.isNull():
+                            scaled_pix = pix.scaled(64, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                            self.thumbnail_cache[img_path] = scaled_pix
+                            thumb_label.setPixmap(scaled_pix)
             self.table_recent.setCellWidget(row_idx, 0, thumb_label)
             
             # Filename

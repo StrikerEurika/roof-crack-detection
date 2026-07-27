@@ -31,10 +31,14 @@ class BaseService:
         return config
 
     def save_image_assets(self, base_name: str, visualization: object, binary_mask: object, overlay: object = None) -> tuple:
-        """Saves visualization, transparent overlay, and binary mask to the historical results folder."""
+        """Saves visualization, transparent overlay, and binary mask to the historical results folder with optimized encoding."""
         timestamp_slug = int(time.time())
-        vis_filename = f"{base_name}_vis_{timestamp_slug}.png"
-        overlay_filename = f"{base_name}_overlay_{timestamp_slug}.png"
+        vis_filename = f"{base_name}_vis_{timestamp_slug}.jpg"
+        
+        # If overlay has alpha channel, save as PNG, otherwise fast JPG
+        has_alpha = overlay is not None and len(overlay.shape) == 3 and overlay.shape[2] == 4
+        overlay_ext = "png" if has_alpha else "jpg"
+        overlay_filename = f"{base_name}_overlay_{timestamp_slug}.{overlay_ext}"
         mask_filename = f"{base_name}_mask_{timestamp_slug}.png"
 
         vis_output_path = os.path.join(self.hm.results_dir, vis_filename)
@@ -42,12 +46,29 @@ class BaseService:
         mask_output_path = os.path.join(self.hm.results_dir, mask_filename)
 
         try:
-            Image.fromarray(visualization).save(vis_output_path)
+            # Save visualization as fast high-quality JPEG
+            vis_img = Image.fromarray(visualization)
+            if vis_img.mode != "RGB":
+                vis_img = vis_img.convert("RGB")
+            vis_img.save(vis_output_path, "JPEG", quality=88, optimize=False)
+
+            # Save overlay image
             if overlay is not None:
-                Image.fromarray(overlay).save(overlay_output_path)
+                overlay_img = Image.fromarray(overlay)
+                if has_alpha:
+                    overlay_img.save(overlay_output_path, "PNG", compress_level=1)
+                else:
+                    if overlay_img.mode != "RGB":
+                        overlay_img = overlay_img.convert("RGB")
+                    overlay_img.save(overlay_output_path, "JPEG", quality=88, optimize=False)
             else:
                 overlay_output_path = vis_output_path
-            Image.fromarray(binary_mask).save(mask_output_path)
+
+            # Save binary mask with fast PNG compression
+            mask_img = Image.fromarray(binary_mask)
+            if mask_img.mode not in ("L", "1"):
+                mask_img = mask_img.convert("L")
+            mask_img.save(mask_output_path, "PNG", compress_level=1)
         except Exception as e:
             print(f"Warning: Failed to save result assets: {e}")
             raise e

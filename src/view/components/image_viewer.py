@@ -54,13 +54,22 @@ class ImageViewer(QGraphicsView):
     def set_image(self, pixmap: QPixmap) -> None:
         """Display QPixmap, fit to screen."""
         self.pixmap_item.setPixmap(pixmap)
-        self.scene.setSceneRect(self.pixmap_item.boundingRect())
-        self.fit_in_view()
+        if not pixmap.isNull():
+            self.scene.setSceneRect(self.pixmap_item.boundingRect())
+            self.fit_in_view()
+        else:
+            self.scene.setSceneRect(0, 0, 0, 0)
 
     def set_ndarray_image(self, ndarray_img: np.ndarray) -> None:
         """Loads a NumPy array (RGB, RGBA, Grayscale, Binary) into viewer."""
         q_img = self._ndarray_to_qimage(ndarray_img)
         self.set_image(QPixmap.fromImage(q_img))
+
+    def clear(self) -> None:
+        """Clears displayed pixmap and resets viewer state."""
+        self.pixmap_item.setPixmap(QPixmap())
+        self.scene.setSceneRect(0, 0, 0, 0)
+        self.current_zoom = 1.0
 
     @staticmethod
     def _ndarray_to_qimage(array: np.ndarray) -> QImage:

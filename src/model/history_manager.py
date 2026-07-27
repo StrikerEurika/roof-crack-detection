@@ -148,6 +148,17 @@ class HistoryManager:
         for rec in list(self.history):
             self.delete_record(rec["id"])
         self.history = []
+        
+        # Clean up any remaining cached files in results_dir
+        if os.path.exists(self.results_dir):
+            for file in os.listdir(self.results_dir):
+                file_path = os.path.join(self.results_dir, file)
+                if os.path.isfile(file_path):
+                    try:
+                        os.remove(file_path)
+                    except Exception as e:
+                        print(f"Failed to remove cached file {file_path}: {e}")
+
         return self.save_history()
 
     def update_report_path(self, record_id: str, report_path: str) -> bool:
