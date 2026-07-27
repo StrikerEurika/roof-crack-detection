@@ -389,7 +389,7 @@ wheels = [
 
 [[package]]
 name = "findcrack"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "../findcrack" }
 dependencies = [
     { name = "albumentations" },
