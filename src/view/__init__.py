@@ -8,10 +8,13 @@ from .home_view import HomeView
 from .inspection_view import InspectionView
 from .batch_view import BatchView
 from .settings_view import SettingsView
+from .history_view import HistoryView
 
 __all__ = [
     "HomeView",
     "InspectionView",
     "BatchView",
     "SettingsView",
+    "HistoryView",
 ]
+

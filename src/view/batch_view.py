@@ -12,7 +12,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, Signal, Slot
 
 from qfluentwidgets import (
-    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel, CaptionLabel,
+    SimpleCardWidget, BodyLabel, SubtitleLabel, LargeTitleLabel, CaptionLabel,
     ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
     ProgressBar, TextEdit, TableWidget, FluentIcon as FIF,
     InfoBar, InfoBarPosition
@@ -142,6 +142,8 @@ class BatchView(QWidget):
         right_layout.setSpacing(16)
 
         # Header Details
+        # title = LargeTitleLabel("Batch Roof Crack Detection", self.panel_right)
+        # right_layout.addWidget(title)
         lbl_queue_title = SubtitleLabel("Batch Execution Progress", self.panel_right)
         right_layout.addWidget(lbl_queue_title)
 

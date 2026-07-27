@@ -8,8 +8,8 @@ from qfluentwidgets import FluentIcon as FIF
 
 from src.model import HistoryManager
 from src.services import InferenceService
-from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel
-from src.view import HomeView, InspectionView, BatchView, SettingsView
+from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel, HistoryViewModel
+from src.view import HomeView, InspectionView, BatchView, SettingsView, HistoryView
 
 class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
@@ -58,18 +58,21 @@ class MainWindow(FluentWindow):
         self.home_view_model = HomeViewModel(self.hm)
         self.inspection_view_model = InspectionViewModel(self.hm, self.inference_service)
         self.batch_view_model = BatchViewModel(self.hm, self.inference_service)
+        self.history_view_model = HistoryViewModel(self.hm)
         self.settings_view_model = SettingsViewModel(self.hm)
 
         # Initialize the views
         self.page_home = HomeView(self.home_view_model, self)
         self.page_single = InspectionView(self.inspection_view_model, self)
         self.page_batch = BatchView(self.batch_view_model, self)
+        self.page_history = HistoryView(self.history_view_model, self)
         self.page_settings = SettingsView(self.settings_view_model, self)
 
         # Set object names (crucial for QFluentWidgets navigation routing)
         self.page_home.setObjectName("homeView")
         self.page_single.setObjectName("inspectionView")
         self.page_batch.setObjectName("batchView")
+        self.page_history.setObjectName("historyView")
         self.page_settings.setObjectName("settingsView")
 
     def setup_navigation(self):
@@ -77,6 +80,7 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.page_home, FIF.HOME, "Dashboard")
         self.addSubInterface(self.page_single, FIF.ZOOM, "Single Inspection")
         self.addSubInterface(self.page_batch, FIF.FOLDER, "Batch Processing")
+        self.addSubInterface(self.page_history, FIF.HISTORY, "History")
         
         # Add Settings at the bottom of the sidebar
         self.addSubInterface(
@@ -95,33 +99,42 @@ class MainWindow(FluentWindow):
         # Inspection list details routing
         self.page_home.view_record_signal.connect(self.on_view_historical_record)
 
-        # Refresh dashboard when history changes
-        self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
-        self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
+        # Refresh dashboard and history when history changes
+        self.page_single.inspection_completed.connect(self.on_new_inspection_completed)
+        self.page_batch.batch_completed.connect(self.on_new_inspection_completed)
+        self.page_history.history_changed.connect(self.page_home.refresh_dashboard)
         self.page_settings.settings_saved.connect(self.on_settings_saved)
         self.settings_view_model.history_cleared.connect(self.on_history_cleared)
 
-        # Auto-refresh when current tab switches back to dashboard page
+        # Auto-refresh when current tab switches back to dashboard or history page
         self.stackedWidget.currentChanged.connect(self.on_current_changed)
+
+    def on_new_inspection_completed(self):
+        self.page_home.refresh_dashboard()
+        self.page_history.refresh_list()
 
     def on_current_changed(self, index):
         widget = self.stackedWidget.widget(index)
         if widget == self.page_home:
             self.page_home.refresh_dashboard()
+        elif widget == self.page_history:
+            self.page_history.refresh_list()
 
     @Slot(dict)
     def on_view_historical_record(self, record):
         """Triggered from history list to load results and view details."""
-        self.switchTo(self.page_single)
-        self.inspection_view_model.load_historical_record(record)
+        self.switchTo(self.page_history)
+        self.page_history.show_detail_inspection(record)
 
     @Slot()
     def on_history_cleared(self):
         """Resets loaded inspection views and clears memory caches when history is cleared."""
         self.inspection_view_model.clear_inspection()
+        self.page_history.refresh_list()
         self.page_home.thumbnail_cache.clear()
         self.page_home.refresh_dashboard()
         self.inference_service.clear_cache()
+
 
     @Slot()
     def on_settings_saved(self):
@@ -145,6 +158,7 @@ class MainWindow(FluentWindow):
             "home_view.py", 
             "inspection_view.py", 
             "batch_view.py", 
+            "history_view.py",
             "settings_view.py",
             ".",
         ]
@@ -219,7 +233,7 @@ class MainWindow(FluentWindow):
                 self.page_single = new_page
                 
                 # Reconnect signals
-                self.page_single.inspection_completed.connect(self.page_home.refresh_dashboard)
+                self.page_single.inspection_completed.connect(self.on_new_inspection_completed)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
                 nav_item = self.navigationInterface.widget("inspectionView")
@@ -252,7 +266,7 @@ class MainWindow(FluentWindow):
                 self.page_batch = new_page
                 
                 # Reconnect signals
-                self.page_batch.batch_completed.connect(self.page_home.refresh_dashboard)
+                self.page_batch.batch_completed.connect(self.on_new_inspection_completed)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
                 nav_item = self.navigationInterface.widget("batchView")
@@ -267,6 +281,40 @@ class MainWindow(FluentWindow):
                 if is_current:
                     self.switchTo(self.page_batch)
                 print("✨ BatchView reloaded in-place successfully!")
+
+            elif filename == "history_view.py":
+                import src.view.history_view
+                importlib.reload(src.view.history_view)
+                
+                is_current = (self.stackedWidget.currentWidget() == self.page_history)
+                
+                self.stackedWidget.blockSignals(True)
+                self.stackedWidget.view.blockSignals(True)
+                
+                self.stackedWidget.removeWidget(self.page_history)
+                self.page_history.deleteLater()
+                new_page = src.view.history_view.HistoryView(self.history_view_model, self)
+                new_page.setObjectName("historyView")
+                self.stackedWidget.addWidget(new_page)
+                self.page_history = new_page
+                
+                # Reconnect signals
+                self.page_history.history_changed.connect(self.page_home.refresh_dashboard)
+                
+                # Update QFluentWidgets sidebar navigation onClick callback
+                nav_item = self.navigationInterface.widget("historyView")
+                if nav_item:
+                    nav_item.clicked.disconnect()
+                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+                    nav_item.clicked.connect(lambda: self.switchTo(self.page_history))
+                
+                self.stackedWidget.blockSignals(False)
+                self.stackedWidget.view.blockSignals(False)
+                
+                if is_current:
+                    self.switchTo(self.page_history)
+                    self.page_history.refresh_list()
+                print("✨ HistoryView reloaded in-place successfully!")
 
             elif filename == "settings_view.py":
                 import src.view.settings_view
@@ -306,3 +354,4 @@ class MainWindow(FluentWindow):
             
         # Re-add watched path (some editors recreate files on save)
         self.watcher.addPath(file_path)
+
