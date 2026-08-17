@@ -139,6 +139,11 @@ class SettingsView(QWidget):
         self.combo_model.clear()
         variants = get_available_model_variants()
         from PySide6.QtCore import Qt
+        if not variants:
+            self.combo_model.addItem("Loading models...", userData=None)
+            self.combo_model.setEnabled(False)
+            return
+        self.combo_model.setEnabled(True)
         for entry in variants:
             icon = None
             tooltip = None

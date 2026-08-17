@@ -1,6 +1,7 @@
 import time
 import threading
-
+import os
+import json
 
 _gpu_available_cache = None
 
@@ -45,6 +46,12 @@ _model_variants_lock = threading.Lock()
 _model_variants_ready = threading.Event()
 _model_fetch_callbacks = []
 
+_MODEL_CACHE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "settings",
+    "model_cache.json"
+)
+
 
 def _import_findcrack_heavy():
     """Imports heavy C-extensions on demand to avoid blocking startup."""
@@ -73,6 +80,12 @@ def _fetch_model_variants_worker():
             })
         with _model_variants_lock:
             _model_variants_cache = result
+        try:
+            os.makedirs(os.path.dirname(_MODEL_CACHE_PATH), exist_ok=True)
+            with open(_MODEL_CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2)
+        except Exception:
+            pass
     except Exception:
         pass
     _model_variants_ready.set()
@@ -98,11 +111,30 @@ def start_background_model_fetch(callback=None):
     t.start()
 
 
+def _load_model_variants_from_disk() -> list | None:
+    """Loads cached model variants from disk if available."""
+    try:
+        if os.path.exists(_MODEL_CACHE_PATH):
+            with open(_MODEL_CACHE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and data:
+                    return data
+    except Exception:
+        pass
+    return None
+
+
 def get_available_model_variants() -> list:
-    """Returns cached live model list if ready, else empty placeholder."""
+    """Returns cached live model list if ready, else tries disk cache, else empty placeholder."""
+    global _model_variants_cache
     with _model_variants_lock:
         if _model_variants_cache is not None:
             return _model_variants_cache
+    disk_cache = _load_model_variants_from_disk()
+    if disk_cache:
+        with _model_variants_lock:
+            _model_variants_cache = disk_cache
+        return disk_cache
     return []
 
 

@@ -202,6 +202,7 @@ Thumbs.db
 
 config.json
 history.json
+model_cache.json
 
 docs/
 !src/core/models
