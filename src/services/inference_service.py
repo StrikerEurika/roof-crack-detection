@@ -1,4 +1,5 @@
 import time
+import threading
 
 
 _gpu_available_cache = None
@@ -39,26 +40,23 @@ LEGACY_VARIANT_MAP = {
     "Seg_UNET_CFD_actual_v1": "Seg_Unet-v1_CFD",
 }
 
-DEFAULT_MODEL_VARIANTS = [
-    {"key": "Seg_Unet-v1_CFD", "display_name": "ResNet50-UNet (CFD Roof Cracks)", "status": "available"},
-    {"key": "Seg_YOLO26n-seg-v1_crack-seg", "display_name": "YOLOv8n-Seg (Roof Damage Segmentation)", "status": "available"}
-]
-
 _model_variants_cache = None
+_model_variants_lock = threading.Lock()
+_model_variants_ready = threading.Event()
+_model_fetch_callbacks = []
+
+# Pre-import heavy C-extensions in main thread to avoid threading hangs
+try:
+    import numpy  # noqa: F401
+    import onnxruntime  # noqa: F401
+    from findcrack.models.registry import load_registry  # noqa: F401
+except Exception:
+    pass
 
 
-def get_available_model_variants(fetch_live: bool = False) -> list:
-    """
-    Returns the list of model variants for UI. Uses fast static defaults on startup
-    to prevent blocking PyTorch/findcrack imports.
-    """
+def _fetch_model_variants_worker():
+    """Background worker that imports findcrack and fetches real model list."""
     global _model_variants_cache
-    if not fetch_live:
-        return DEFAULT_MODEL_VARIANTS
-
-    if _model_variants_cache is not None:
-        return _model_variants_cache
-
     try:
         from findcrack import get_model_status_map
         model_map = get_model_status_map()
@@ -73,22 +71,51 @@ def get_available_model_variants(fetch_live: bool = False) -> list:
                 "local_path": info.get("local_path"),
                 "sha256": info.get("sha256")
             })
-        _model_variants_cache = result
-        return result
+        with _model_variants_lock:
+            _model_variants_cache = result
     except Exception:
         pass
-    return DEFAULT_MODEL_VARIANTS
+    _model_variants_ready.set()
+    for cb in _model_fetch_callbacks:
+        try:
+            cb()
+        except Exception:
+            pass
+
+
+def start_background_model_fetch(callback=None):
+    """Starts background thread to fetch model variants. Optional callback fires when done."""
+    if callback:
+        _model_fetch_callbacks.append(callback)
+    if _model_variants_ready.is_set():
+        if callback:
+            try:
+                callback()
+            except Exception:
+                pass
+        return
+    t = threading.Thread(target=_fetch_model_variants_worker, daemon=True)
+    t.start()
+
+
+def get_available_model_variants() -> list:
+    """Returns cached live model list if ready, else empty placeholder."""
+    with _model_variants_lock:
+        if _model_variants_cache is not None:
+            return _model_variants_cache
+    return []
 
 
 def resolve_model_variant(variant: str | dict | None) -> str:
-    """
-    Fast resolution for model variant keys without triggering heavy library imports at startup.
-    """
+    """Fast resolution for model variant keys. Returns as-is if live list not yet loaded."""
     if isinstance(variant, dict):
         variant = variant.get("key")
 
     if not variant:
-        return "Seg_Unet-v1_CFD"
+        available = get_available_model_variants()
+        if available:
+            return available[0]["key"] if isinstance(available[0], dict) else available[0]
+        return ""
 
     if variant in LEGACY_VARIANT_MAP:
         return LEGACY_VARIANT_MAP[variant]
@@ -96,13 +123,11 @@ def resolve_model_variant(variant: str | dict | None) -> str:
     if isinstance(variant, str) and variant.strip():
         return variant.strip()
 
-    return "Seg_Unet-v1_CFD"
+    return ""
 
 
 class InferenceService:
     """Owns model pipeline loading, cache updates, and inference result shaping."""
-
-    DEFAULT_VARIANT = "Seg_Unet-v1_CFD"
 
     def __init__(self, model_cache: dict | None = None):
         self.model_cache = model_cache if model_cache is not None else {}
@@ -111,7 +136,7 @@ class InferenceService:
         self.model_cache.clear()
 
     def get_variant(self, config: dict) -> str:
-        return resolve_model_variant(config.get("model_variant", self.DEFAULT_VARIANT))
+        return resolve_model_variant(config.get("model_variant"))
 
     def get_pipeline(self, config: dict):
         variant = self.get_variant(config)

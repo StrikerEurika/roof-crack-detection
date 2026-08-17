@@ -12,6 +12,7 @@ from .services import (
     get_inference_pipeline,
     get_available_model_variants,
     resolve_model_variant,
+    start_background_model_fetch,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "get_inference_pipeline",
     "get_available_model_variants",
     "resolve_model_variant",
+    "start_background_model_fetch",
 ]

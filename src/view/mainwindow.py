@@ -5,9 +5,11 @@ from PySide6.QtGui import QIcon, QPixmap
 
 from qfluentwidgets import FluentWindow, NavigationItemPosition, setTheme, Theme, toggleTheme, isDarkTheme
 from qfluentwidgets import FluentIcon as FIF
+from PySide6.QtCore import Slot, QFileSystemWatcher, QTimer
 
 from src.model import HistoryManager
 from src.services import InferenceService
+from src.services.inference_service import start_background_model_fetch, get_available_model_variants
 from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel, HistoryViewModel
 from src.view import HomeView, InspectionView, BatchView, SettingsView, HistoryView, DocumentationView
 
@@ -52,6 +54,30 @@ class MainWindow(FluentWindow):
 
         # 4. Setup Hot-Reload Watcher for Views
         self.setup_hot_reload()
+
+        # 5. Poll for available model variants on main thread (background fetch runs independently)
+        self._model_poll_timer = QTimer(self)
+        self._model_poll_timer.timeout.connect(self._check_and_refresh_models)
+        self._model_poll_timer.start(500)
+        start_background_model_fetch()
+
+    def _check_and_refresh_models(self):
+        variants = get_available_model_variants()
+        if not variants:
+            return
+        self._model_poll_timer.stop()
+        self._refresh_all_model_combos()
+
+    def _refresh_all_model_combos(self):
+        if hasattr(self, "page_single") and hasattr(self.page_single, "rebuild_model_combo"):
+            self.page_single.rebuild_model_combo()
+            self.page_single.load_settings_defaults()
+        if hasattr(self, "page_batch") and hasattr(self.page_batch, "rebuild_model_combo"):
+            self.page_batch.rebuild_model_combo()
+            self.page_batch.load_settings_defaults()
+        if hasattr(self, "page_settings") and hasattr(self.page_settings, "rebuild_model_combo"):
+            self.page_settings.rebuild_model_combo()
+            self.page_settings.view_model.load_settings()
 
     def _resolve_history_manager(self, app_context) -> HistoryManager:
         if hasattr(app_context, "history_manager"):
