@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Optional
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QLabel
-from PySide6.QtGui import QPixmap, QPainter, QImage
+from PySide6.QtGui import QPixmap, QPainter, QImage, QColor
 from PySide6.QtCore import Qt, Signal, QTimer
 
 class ImageViewer(QGraphicsView):
@@ -23,6 +23,17 @@ class ImageViewer(QGraphicsView):
         self.pixmap_item = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap_item)
 
+        # Configure background style
+        self.setStyleSheet("""
+            QGraphicsView {
+                border: 1px solid #cbd5e1;
+                background-color: #e2e8f0;
+                border-radius: 8px;
+            }
+        """)
+        self.setBackgroundBrush(QColor("#e2e8f0"))
+        self.scene.setBackgroundBrush(QColor("#e2e8f0"))
+
         # Configure viewer behavior
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -31,6 +42,12 @@ class ImageViewer(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        # Soft placeholder text label
+        self.placeholder_label = QLabel("No image loaded", self)
+        self.placeholder_label.setStyleSheet("color: #64748b; font-size: 14px; font-weight: 500; background: transparent;")
+        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.placeholder_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         # Set drag & drop
         self.setAcceptDrops(True)
@@ -55,9 +72,11 @@ class ImageViewer(QGraphicsView):
         """Display QPixmap, fit to screen."""
         self.pixmap_item.setPixmap(pixmap)
         if not pixmap.isNull():
+            self.placeholder_label.setVisible(False)
             self.scene.setSceneRect(self.pixmap_item.boundingRect())
             self.fit_in_view()
         else:
+            self.placeholder_label.setVisible(True)
             self.scene.setSceneRect(0, 0, 0, 0)
 
     def set_ndarray_image(self, ndarray_img: np.ndarray) -> None:
@@ -70,6 +89,12 @@ class ImageViewer(QGraphicsView):
         self.pixmap_item.setPixmap(QPixmap())
         self.scene.setSceneRect(0, 0, 0, 0)
         self.current_zoom = 1.0
+        self.placeholder_label.setVisible(True)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "placeholder_label"):
+            self.placeholder_label.setGeometry(self.rect())
 
     @staticmethod
     def _ndarray_to_qimage(array: np.ndarray) -> QImage:
