@@ -9,7 +9,7 @@ from qfluentwidgets import FluentIcon as FIF
 from src.model import HistoryManager
 from src.services import InferenceService
 from src.view_model import HomeViewModel, InspectionViewModel, BatchViewModel, SettingsViewModel, HistoryViewModel
-from src.view import HomeView, InspectionView, BatchView, SettingsView, HistoryView
+from src.view import HomeView, InspectionView, BatchView, SettingsView, HistoryView, DocumentationView
 
 class MainWindow(FluentWindow):
     """The main desktop application window managing navigation and view switches via QFluentWidgets and MVVM."""
@@ -67,6 +67,7 @@ class MainWindow(FluentWindow):
         self.page_batch = BatchView(self.batch_view_model, self)
         self.page_history = HistoryView(self.history_view_model, self)
         self.page_settings = SettingsView(self.settings_view_model, self)
+        self.page_doc = DocumentationView(self)
 
         # Set object names (crucial for QFluentWidgets navigation routing)
         self.page_home.setObjectName("homeView")
@@ -74,6 +75,7 @@ class MainWindow(FluentWindow):
         self.page_batch.setObjectName("batchView")
         self.page_history.setObjectName("historyView")
         self.page_settings.setObjectName("settingsView")
+        self.page_doc.setObjectName("documentationView")
 
     def setup_navigation(self):
         # Add sub-interfaces to the navigation sidebar
@@ -82,7 +84,13 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.page_batch, FIF.FOLDER, "Batch Processing")
         self.addSubInterface(self.page_history, FIF.HISTORY, "History")
         
-        # Add Settings at the bottom of the sidebar
+        # Add User Manual and Settings at the bottom of the sidebar
+        self.addSubInterface(
+            self.page_doc,
+            FIF.BOOK_SHELF,
+            "User Manual",
+            NavigationItemPosition.BOTTOM
+        )
         self.addSubInterface(
             self.page_settings, 
             FIF.SETTING, 
