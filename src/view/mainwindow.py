@@ -129,6 +129,15 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
 
+        # Add Restart App action at bottom of navigation sidebar
+        self.navigationInterface.addItem(
+            routeKey="restartAction",
+            icon=FIF.SYNC,
+            text="Restart App",
+            onClick=self.on_restart_clicked,
+            position=NavigationItemPosition.BOTTOM
+        )
+
         # Add User Manual and Settings at the bottom of the sidebar
         self.addSubInterface(
             self.page_doc,
@@ -148,6 +157,10 @@ class MainWindow(FluentWindow):
         new_mode = "dark" if isDarkTheme() else "light"
         self.hm.save_config({"theme_mode": new_mode})
         self.notify_theme_changed()
+
+    def on_restart_clicked(self):
+        import sys
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def notify_theme_changed(self):
         if hasattr(self, "page_doc"):
