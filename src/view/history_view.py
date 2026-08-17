@@ -17,7 +17,8 @@ from qfluentwidgets import (
     SimpleCardWidget, TitleLabel, SubtitleLabel, LargeTitleLabel,
     BodyLabel, CaptionLabel, PushButton, PrimaryPushButton,
     TableWidget, TabWidget, ComboBox, LineEdit, SearchLineEdit,
-    FluentIcon as FIF, InfoBar, InfoBarPosition, MessageBox
+    FluentIcon as FIF, InfoBar, InfoBarPosition, MessageBox,
+    SingleDirectionScrollArea
 )
 
 from src.view.components.image_viewer import ImageViewer
@@ -252,12 +253,14 @@ class HistoryView(QWidget):
         body_split.addWidget(left_widget, stretch=3)
 
         # --- Right Panel: Inspection Summary & Bounding Boxes ---
-        right_scroll = QScrollArea(self.page_detail)
+        right_scroll = SingleDirectionScrollArea(self.page_detail)
         right_scroll.setWidgetResizable(True)
         right_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        right_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        right_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        right_scroll.viewport().setStyleSheet("background: transparent;")
 
         right_container = QWidget()
+        right_container.setStyleSheet("QWidget { background: transparent; }")
         right_layout = QVBoxLayout(right_container)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(16)
@@ -275,6 +278,7 @@ class HistoryView(QWidget):
         # Details list
         self.lbl_detail_info = BodyLabel("", self.card_detail_summary)
         self.lbl_detail_info.setWordWrap(True)
+        self.lbl_detail_info.setStyleSheet("QLabel { background: transparent; word-break: break-all; }")
         summary_card_layout.addWidget(self.lbl_detail_info)
 
         right_layout.addWidget(self.card_detail_summary)
@@ -539,7 +543,7 @@ class HistoryView(QWidget):
             f"<b>Model & File Context:</b><br>"
             f"• <b>Model Variant:</b> {record.get('model_used', 'N/A')}<br>"
             f"• <b>Inspection Date:</b> {formatted_date}<br>"
-            f"• <b>File Location:</b> {orig_path}"
+            f"• <b>File Location:</b> <span style='word-break: break-all;'>{orig_path}</span>"
         )
         self.lbl_detail_info.setText(info_text)
 
