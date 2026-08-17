@@ -159,8 +159,43 @@ class MainWindow(FluentWindow):
         self.notify_theme_changed()
 
     def on_restart_clicked(self):
-        import sys
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        dialog = MessageBox(
+            "Restart Application",
+            "Restarting will reset all views, clear inference cache, and reload settings from disk.\n\nAny unsaved work will be lost.",
+            self.window()
+        )
+        if not dialog.exec():
+            return
+
+        self.inspection_view_model.clear_inspection()
+        self.batch_view_model.cancel_batch()
+        self.inference_service.clear_cache()
+
+        self.hm.config = self.hm._load_config()
+        self.hm.history = self.hm._load_history()
+
+        self.page_home.thumbnail_cache.clear()
+        self.page_home.refresh_dashboard()
+        self.page_history.refresh_list()
+
+        self.page_single.rebuild_model_combo()
+        self.page_single.load_settings_defaults()
+        self.page_batch.rebuild_model_combo()
+        self.page_batch.load_settings_defaults()
+        self.page_settings.rebuild_model_combo()
+        self.page_settings.view_model.load_settings()
+
+        self.switchTo(self.page_home)
+
+        InfoBar.success(
+            title="Application Restarted",
+            content="All views have been reset and settings reloaded.",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
 
     def notify_theme_changed(self):
         if hasattr(self, "page_doc"):
