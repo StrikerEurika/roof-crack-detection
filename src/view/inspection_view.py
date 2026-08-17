@@ -14,10 +14,10 @@ from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt, Signal, Slot, QRectF
 
 from qfluentwidgets import (
-    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel, CaptionLabel,
+    SimpleCardWidget, BodyLabel, SubtitleLabel, TitleLabel, LargeTitleLabel, CaptionLabel,
     ComboBox, Slider, CheckBox, PushButton, PrimaryPushButton,
     ProgressBar, TextEdit, TableWidget, TabWidget, FluentIcon as FIF,
-    InfoBar, InfoBarPosition
+    InfoBar, InfoBarPosition, SingleDirectionScrollArea
 )
 
 from src.view.components.image_viewer import ImageViewer
@@ -33,16 +33,32 @@ class InspectionView(QWidget):
         super().__init__(parent)
         self.view_model = view_model
 
-        # Main horizontal layout
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(24, 24, 24, 24)
-        self.layout.setSpacing(20)
+        # Main vertical layout
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(24, 24, 24, 24)
+        self.main_layout.setSpacing(16)
+
+        # Header Section
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+        title = LargeTitleLabel("Single Image Inspection", self)
+        subtitle = BodyLabel("Load, inspect, analyze, and detect cracks on individual roof images", self)
+        subtitle.setStyleSheet("color: #606060;")
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+        self.main_layout.addLayout(header_layout)
+
+        # Content horizontal layout
+        self.content_layout = QHBoxLayout()
+        self.content_layout.setSpacing(20)
 
         # 1. Left Control Panel
         self.setup_control_panel()
 
         # 2. Right Display Panel
         self.setup_display_panel()
+
+        self.main_layout.addLayout(self.content_layout)
 
         # Bind ViewModel Signals
         self.connect_view_model()
@@ -51,12 +67,11 @@ class InspectionView(QWidget):
         self.load_settings_defaults()
 
     def setup_control_panel(self):
-        self.panel_left_scroll = QScrollArea(self)
+        self.panel_left_scroll = SingleDirectionScrollArea(self)
         self.panel_left_scroll.setFixedWidth(300)
         self.panel_left_scroll.setWidgetResizable(True)
-        self.panel_left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.panel_left_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.panel_left_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        self.panel_left_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.panel_left_scroll.viewport().setStyleSheet("background: transparent;")
 
         self.panel_left = QWidget()
         self.panel_left.setStyleSheet("background: transparent;")
@@ -157,7 +172,7 @@ class InspectionView(QWidget):
         left_layout.addStretch()
 
         self.panel_left_scroll.setWidget(self.panel_left)
-        self.layout.addWidget(self.panel_left_scroll)
+        self.content_layout.addWidget(self.panel_left_scroll)
 
     def on_zoom_changed(self, zoom: float):
         self.viewer_status.setText(f"Current Zoom: {zoom:.2f}x")
@@ -262,7 +277,7 @@ class InspectionView(QWidget):
         results_layout.addWidget(self.card_actions, stretch=1)
         right_layout.addLayout(results_layout, stretch=1)
 
-        self.layout.addWidget(self.panel_right)
+        self.content_layout.addWidget(self.panel_right)
 
     def connect_view_model(self):
         self.view_model.image_loaded.connect(self.on_image_loaded)

@@ -30,16 +30,32 @@ class BatchView(QWidget):
         super().__init__(parent)
         self.view_model = view_model
 
-        # Main horizontal layout
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(24, 24, 24, 24)
-        self.layout.setSpacing(20)
+        # Main vertical layout
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(24, 24, 24, 24)
+        self.main_layout.setSpacing(16)
+
+        # Header Section
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+        title = LargeTitleLabel("Batch Inspection", self)
+        subtitle = BodyLabel("Process and analyze entire directories of roof images in batch", self)
+        subtitle.setStyleSheet("color: #606060;")
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+        self.main_layout.addLayout(header_layout)
+
+        # Content horizontal layout
+        self.content_layout = QHBoxLayout()
+        self.content_layout.setSpacing(20)
 
         # 1. Left Control Panel
         self.setup_control_panel()
 
         # 2. Right Display Panel
         self.setup_queue_panel()
+
+        self.main_layout.addLayout(self.content_layout)
 
         # Bind ViewModel signals
         self.connect_view_model()
@@ -133,7 +149,7 @@ class BatchView(QWidget):
         left_layout.addWidget(self.btn_cancel)
         left_layout.addStretch()
 
-        self.layout.addWidget(self.panel_left)
+        self.content_layout.addWidget(self.panel_left)
 
     def setup_queue_panel(self):
         self.panel_right = QWidget(self)
@@ -179,7 +195,7 @@ class BatchView(QWidget):
         self.txt_log.setMaximumHeight(150)
         right_layout.addWidget(self.txt_log, stretch=1)
 
-        self.layout.addWidget(self.panel_right)
+        self.content_layout.addWidget(self.panel_right)
 
     def connect_view_model(self):
         self.view_model.input_dir_changed.connect(self.on_input_dir_changed)
