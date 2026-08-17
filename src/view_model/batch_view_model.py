@@ -84,9 +84,10 @@ class BatchViewModel(QObject):
         self.active_worker.start()
 
     def cancel_batch(self):
-        """Requests cancellation of the active batch job."""
+        """Requests cancellation of the active batch job and waits for it to finish."""
         if self.active_worker:
             self.active_worker.cancel()
+            self.active_worker.wait()
 
     @Slot()
     def _on_batch_started(self):

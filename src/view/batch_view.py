@@ -19,7 +19,7 @@ from qfluentwidgets import (
 )
 
 from src.view_model import BatchViewModel
-from src import check_gpu_available, get_available_model_variants, resolve_model_variant
+from src.services.inference_service import check_gpu_available, get_available_model_variants, resolve_model_variant
 
 class BatchView(QWidget):
     """View widget for folder-level batch roof crack detection, refactored to use BatchViewModel."""
@@ -59,9 +59,6 @@ class BatchView(QWidget):
 
         # Bind ViewModel signals
         self.connect_view_model()
-
-        # Load configurations defaults
-        self.load_settings_defaults()
 
     def setup_control_panel(self):
         self.panel_left = QWidget(self)

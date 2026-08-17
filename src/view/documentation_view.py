@@ -67,9 +67,6 @@ class DocumentationView(QWidget):
         card_layout.addWidget(self.text_browser)
         self.main_layout.addWidget(self.card_container, stretch=1)
 
-        # Load initial document
-        self.reload_manual()
-
     def _resolve_manual_path(self) -> str:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         return os.path.join(base_dir, "docs", "USER_MANUAL.md")

@@ -55,9 +55,6 @@ class HistoryView(QWidget):
         # Connect ViewModel signals
         self.connect_view_model()
 
-        # Load initial data
-        self.refresh_list()
-
     # ==========================================
     # PAGE 1: LIST PAGE SETUP
     # ==========================================

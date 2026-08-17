@@ -1,11 +1,9 @@
 import os
 import importlib
-from PySide6.QtCore import Slot, QFileSystemWatcher
+from PySide6.QtCore import Slot, QFileSystemWatcher, QTimer, Qt
 from PySide6.QtGui import QIcon, QPixmap
-
-from qfluentwidgets import FluentWindow, NavigationItemPosition, setTheme, Theme, toggleTheme, isDarkTheme
+from qfluentwidgets import FluentWindow, NavigationItemPosition, setTheme, Theme, toggleTheme, isDarkTheme, MessageBox, InfoBar, InfoBarPosition
 from qfluentwidgets import FluentIcon as FIF
-from PySide6.QtCore import Slot, QFileSystemWatcher, QTimer
 
 from src.model import HistoryManager
 from src.services import InferenceService
@@ -21,6 +19,7 @@ class MainWindow(FluentWindow):
         self.context = app_context
         self.hm = self._resolve_history_manager(app_context)
         self.inference_service = self._resolve_inference_service(app_context)
+        self._nav_connections = {}
 
         self.setWindowTitle("Roof Surface Crack Inspection Suite")
         self.resize(1280, 800)
@@ -46,9 +45,6 @@ class MainWindow(FluentWindow):
         # 3. Connect signals
         self.connect_signals()
 
-        # Notify initial theme styling to child views
-        self.notify_theme_changed()
-
         # Select Home Tab by default
         self.switchTo(self.page_home)
 
@@ -60,6 +56,19 @@ class MainWindow(FluentWindow):
         self._model_poll_timer.timeout.connect(self._check_and_refresh_models)
         self._model_poll_timer.start(500)
         start_background_model_fetch()
+
+        # 6. Defer expensive UI refreshes until after window is shown
+        QTimer.singleShot(0, self._post_show_init)
+
+    def _post_show_init(self):
+        """Runs after the window is visible to avoid blocking startup."""
+        self.notify_theme_changed()
+        self.page_home.refresh_dashboard()
+        self.page_history.refresh_list()
+        self.page_single.load_settings_defaults()
+        self.page_batch.load_settings_defaults()
+        self.page_settings.view_model.load_settings()
+        self.page_doc.reload_manual()
 
     def _check_and_refresh_models(self):
         variants = get_available_model_variants()
@@ -171,8 +180,7 @@ class MainWindow(FluentWindow):
         self.batch_view_model.cancel_batch()
         self.inference_service.clear_cache()
 
-        self.hm.config = self.hm._load_config()
-        self.hm.history = self.hm._load_history()
+        self.hm.reload()
 
         self.page_home.thumbnail_cache.clear()
         self.page_home.refresh_dashboard()
@@ -184,6 +192,10 @@ class MainWindow(FluentWindow):
         self.page_batch.load_settings_defaults()
         self.page_settings.rebuild_model_combo()
         self.page_settings.view_model.load_settings()
+
+        self.page_doc.reload_manual()
+
+        self.notify_theme_changed()
 
         self.switchTo(self.page_home)
 
@@ -297,6 +309,23 @@ class MainWindow(FluentWindow):
                 self.watcher.addPath(path)
         self.watcher.fileChanged.connect(self.hot_reload_view)
 
+    def _reconnect_nav(self, route_key, page_attr):
+        """Reconnects a navigation item to the current page after hot-reload."""
+        nav_item = self.navigationInterface.widget(route_key)
+        if not nav_item:
+            return
+        if route_key in self._nav_connections:
+            for conn in self._nav_connections[route_key]:
+                try:
+                    nav_item.clicked.disconnect(conn)
+                except (TypeError, RuntimeError):
+                    pass
+            del self._nav_connections[route_key]
+        page = getattr(self, page_attr)
+        conn1 = nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
+        conn2 = nav_item.clicked.connect(lambda p=page: self.switchTo(p))
+        self._nav_connections[route_key] = [conn1, conn2]
+
 
     def hot_reload_view(self, file_path):
         """Dynamic in-place swap of modified views, preserving ViewModel state."""
@@ -330,11 +359,7 @@ class MainWindow(FluentWindow):
                 self.page_home.view_record_signal.connect(self.on_view_historical_record)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
-                nav_item = self.navigationInterface.widget("homeView")
-                if nav_item:
-                    nav_item.clicked.disconnect()
-                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
-                    nav_item.clicked.connect(lambda: self.switchTo(self.page_home))
+                self._reconnect_nav("homeView", "page_home")
                 
                 # Unblock signals
                 self.stackedWidget.blockSignals(False)
@@ -365,11 +390,7 @@ class MainWindow(FluentWindow):
                 self.page_single.inspection_completed.connect(self.on_new_inspection_completed)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
-                nav_item = self.navigationInterface.widget("inspectionView")
-                if nav_item:
-                    nav_item.clicked.disconnect()
-                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
-                    nav_item.clicked.connect(lambda: self.switchTo(self.page_single))
+                self._reconnect_nav("inspectionView", "page_single")
                 
                 self.stackedWidget.blockSignals(False)
                 self.stackedWidget.view.blockSignals(False)
@@ -398,11 +419,7 @@ class MainWindow(FluentWindow):
                 self.page_batch.batch_completed.connect(self.on_new_inspection_completed)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
-                nav_item = self.navigationInterface.widget("batchView")
-                if nav_item:
-                    nav_item.clicked.disconnect()
-                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
-                    nav_item.clicked.connect(lambda: self.switchTo(self.page_batch))
+                self._reconnect_nav("batchView", "page_batch")
                 
                 self.stackedWidget.blockSignals(False)
                 self.stackedWidget.view.blockSignals(False)
@@ -431,11 +448,7 @@ class MainWindow(FluentWindow):
                 self.page_history.history_changed.connect(self.page_home.refresh_dashboard)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
-                nav_item = self.navigationInterface.widget("historyView")
-                if nav_item:
-                    nav_item.clicked.disconnect()
-                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
-                    nav_item.clicked.connect(lambda: self.switchTo(self.page_history))
+                self._reconnect_nav("historyView", "page_history")
                 
                 self.stackedWidget.blockSignals(False)
                 self.stackedWidget.view.blockSignals(False)
@@ -465,11 +478,7 @@ class MainWindow(FluentWindow):
                 self.page_settings.settings_saved.connect(self.on_settings_saved)
                 
                 # Update QFluentWidgets sidebar navigation onClick callback
-                nav_item = self.navigationInterface.widget("settingsView")
-                if nav_item:
-                    nav_item.clicked.disconnect()
-                    nav_item.clicked.connect(self.navigationInterface.panel._onWidgetClicked)
-                    nav_item.clicked.connect(lambda: self.switchTo(self.page_settings))
+                self._reconnect_nav("settingsView", "page_settings")
                 
                 self.stackedWidget.blockSignals(False)
                 self.stackedWidget.view.blockSignals(False)

@@ -33,6 +33,10 @@ class InspectionViewModel(QObject):
 
     def clear_inspection(self):
         """Resets loaded image, results, and active record state."""
+        if self.active_worker:
+            self.active_worker.terminate()
+            self.active_worker.wait()
+            self.active_worker = None
         self.current_image_path = None
         self.latest_result = None
         self.latest_record = None

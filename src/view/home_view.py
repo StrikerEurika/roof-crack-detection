@@ -52,9 +52,6 @@ class HomeView(QWidget):
         # Bind ViewModel Signals
         self.connect_view_model()
 
-        # Load initial data
-        self.refresh_dashboard()
-
     def setup_header(self):
         header_layout = QVBoxLayout()
         header_layout.setSpacing(4)

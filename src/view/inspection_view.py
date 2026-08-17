@@ -22,7 +22,7 @@ from qfluentwidgets import (
 
 from src.view.components.image_viewer import ImageViewer
 from src.view_model import InspectionViewModel
-from src import check_gpu_available, get_available_model_variants, resolve_model_variant
+from src.services.inference_service import check_gpu_available, get_available_model_variants, resolve_model_variant
 
 class InspectionView(QWidget):
     """View widget for analyzing a single image and viewing results, refactored to use InspectionViewModel."""
@@ -62,9 +62,6 @@ class InspectionView(QWidget):
 
         # Bind ViewModel Signals
         self.connect_view_model()
-
-        # Load configurations defaults
-        self.load_settings_defaults()
 
     def setup_control_panel(self):
         self.panel_left_scroll = SingleDirectionScrollArea(self)

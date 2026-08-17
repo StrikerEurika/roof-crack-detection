@@ -17,7 +17,7 @@ from qfluentwidgets import (
 )
 
 from src.view_model import SettingsViewModel
-from src import get_available_model_variants, resolve_model_variant
+from src.services.inference_service import get_available_model_variants, resolve_model_variant
 
 class SettingsView(QWidget):
     """View widget for modifying system configurations and database utility via SettingsViewModel."""
@@ -68,9 +68,6 @@ class SettingsView(QWidget):
 
         # Bind ViewModel Signals
         self.connect_view_model()
-
-        # Load initial values
-        self.view_model.load_settings()
 
     def setup_model_defaults(self):
         self.group_model = SimpleCardWidget(self)

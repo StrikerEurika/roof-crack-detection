@@ -45,19 +45,19 @@ _model_variants_lock = threading.Lock()
 _model_variants_ready = threading.Event()
 _model_fetch_callbacks = []
 
-# Pre-import heavy C-extensions in main thread to avoid threading hangs
-try:
+
+def _import_findcrack_heavy():
+    """Imports heavy C-extensions on demand to avoid blocking startup."""
     import numpy  # noqa: F401
     import onnxruntime  # noqa: F401
     from findcrack.models.registry import load_registry  # noqa: F401
-except Exception:
-    pass
 
 
 def _fetch_model_variants_worker():
     """Background worker that imports findcrack and fetches real model list."""
     global _model_variants_cache
     try:
+        _import_findcrack_heavy()
         from findcrack import get_model_status_map
         model_map = get_model_status_map()
         result = []
@@ -174,6 +174,7 @@ class InferenceService:
             )
             return pipeline, True
 
+        _import_findcrack_heavy()
         from findcrack.inference import CrackInferencePipeline
 
         pipeline = CrackInferencePipeline.from_pretrained(

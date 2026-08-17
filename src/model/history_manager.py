@@ -96,6 +96,11 @@ class HistoryManager:
             print(f"Error saving history.json: {e}")
             return False
 
+    def reload(self):
+        """Reloads config and history from disk."""
+        self.config = self._load_config()
+        self.history = self._load_history()
+
     def add_record(self, image_path: str, crack_detected: bool, 
                    confidence: float, crack_count: int, model_used: str,
                    vis_image_path: str = None, overlay_image_path: str = None, mask_image_path: str = None,
