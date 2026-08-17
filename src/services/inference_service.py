@@ -5,38 +5,33 @@ _gpu_available_cache = None
 
 
 def check_gpu_available() -> bool:
-    """Checks if CUDA GPU acceleration is available via ONNX Runtime or PyTorch."""
+    """Checks if CUDA GPU acceleration is available via ONNX Runtime or PyTorch without blocking app startup."""
     global _gpu_available_cache
     if _gpu_available_cache is not None:
         return _gpu_available_cache
 
     try:
         import onnxruntime as ort
-
-        if any("CUDA" in provider for provider in ort.get_available_providers()):
+        providers = ort.get_available_providers()
+        if any("CUDA" in provider for provider in providers):
             _gpu_available_cache = True
             return True
     except Exception:
         pass
 
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            _gpu_available_cache = True
-            return True
-    except Exception:
-        pass
+    import sys
+    if "torch" in sys.modules:
+        try:
+            import torch
+            if torch.cuda.is_available():
+                _gpu_available_cache = True
+                return True
+        except Exception:
+            pass
 
     _gpu_available_cache = False
     return False
 
-
-try:
-    from findcrack import list_models
-except ImportError:
-    def list_models():
-        return ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]
 
 LEGACY_VARIANT_MAP = {
     "Det_YOLOv26n-seg_crack-dataset_v1": "Seg_YOLO26n-seg-v1_crack-seg",
@@ -44,11 +39,26 @@ LEGACY_VARIANT_MAP = {
     "Seg_UNET_CFD_actual_v1": "Seg_Unet-v1_CFD",
 }
 
+DEFAULT_MODEL_VARIANTS = [
+    {"key": "Seg_Unet-v1_CFD", "display_name": "ResNet50-UNet (CFD Roof Cracks)", "status": "available"},
+    {"key": "Seg_YOLO26n-seg-v1_crack-seg", "display_name": "YOLOv8n-Seg (Roof Damage Segmentation)", "status": "available"}
+]
 
-def get_available_model_variants() -> list:
+_model_variants_cache = None
+
+
+def get_available_model_variants(fetch_live: bool = False) -> list:
     """
-    Returns the list of model variants with status info for UI (dict entries: key, display_name, status).
+    Returns the list of model variants for UI. Uses fast static defaults on startup
+    to prevent blocking PyTorch/findcrack imports.
     """
+    global _model_variants_cache
+    if not fetch_live:
+        return DEFAULT_MODEL_VARIANTS
+
+    if _model_variants_cache is not None:
+        return _model_variants_cache
+
     try:
         from findcrack import get_model_status_map
         model_map = get_model_status_map()
@@ -63,47 +73,30 @@ def get_available_model_variants() -> list:
                 "local_path": info.get("local_path"),
                 "sha256": info.get("sha256")
             })
+        _model_variants_cache = result
         return result
     except Exception:
         pass
-    # fallback: old static list of just names
-    return [{"key": x, "display_name": x, "status": "available"} for x in ["Seg_Unet-v1_CFD", "Seg_YOLO26n-seg-v1_crack-seg"]]
+    return DEFAULT_MODEL_VARIANTS
 
 
 def resolve_model_variant(variant: str | dict | None) -> str:
     """
-    Resolves legacy variant names to their findcrack equivalent,
-    and validates against available findcrack model variants.
+    Fast resolution for model variant keys without triggering heavy library imports at startup.
     """
-    available = get_available_model_variants()
-    
-    # Extract key if variant is a dictionary
     if isinstance(variant, dict):
         variant = variant.get("key")
-        
-    # Get all valid keys from available variants
-    valid_keys = []
-    for entry in available:
-        if isinstance(entry, dict):
-            valid_keys.append(entry.get("key"))
-        else:
-            valid_keys.append(entry)
-
-    if not valid_keys:
-        return ""
 
     if not variant:
-        return valid_keys[0]
+        return "Seg_Unet-v1_CFD"
 
     if variant in LEGACY_VARIANT_MAP:
-        mapped = LEGACY_VARIANT_MAP[variant]
-        if mapped in valid_keys:
-            return mapped
+        return LEGACY_VARIANT_MAP[variant]
 
-    if variant in valid_keys:
-        return variant
+    if isinstance(variant, str) and variant.strip():
+        return variant.strip()
 
-    return valid_keys[0]
+    return "Seg_Unet-v1_CFD"
 
 
 class InferenceService:

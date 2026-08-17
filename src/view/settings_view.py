@@ -54,10 +54,13 @@ class SettingsView(QWidget):
         # 1. Model Defaults Group
         self.setup_model_defaults()
 
-        # 2. Visualization Style Group
+        # 2. Theme Settings Group
+        self.setup_theme_settings()
+
+        # 3. Visualization Style Group
         self.setup_visualization_styles()
 
-        # 3. Directories & Data Group
+        # 4. Directories & Data Group
         self.setup_data_settings()
 
         # Bottom save buttons
@@ -107,6 +110,33 @@ class SettingsView(QWidget):
         layout.addLayout(slider_layout)
 
         self.scroll_layout.addWidget(self.group_model)
+
+    def setup_theme_settings(self):
+        self.group_theme = SimpleCardWidget(self)
+        layout = QVBoxLayout(self.group_theme)
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = SubtitleLabel("Application Theme Mode", self.group_theme)
+        layout.addWidget(title)
+
+        layout.addWidget(BodyLabel("Select GUI Theme:", self.group_theme))
+        self.combo_theme = ComboBox(self.group_theme)
+        self.combo_theme.addItems(["Light Mode", "Dark Mode"])
+        self.combo_theme.setFixedWidth(200)
+        self.combo_theme.currentIndexChanged.connect(self.on_theme_selection_changed)
+        layout.addWidget(self.combo_theme)
+
+        self.scroll_layout.addWidget(self.group_theme)
+
+    @Slot(int)
+    def on_theme_selection_changed(self, idx: int):
+        from qfluentwidgets import setTheme, Theme
+        mode = "dark" if idx == 1 else "light"
+        setTheme(Theme.DARK if mode == "dark" else Theme.LIGHT)
+        main_win = self.window()
+        if hasattr(main_win, "notify_theme_changed"):
+            main_win.notify_theme_changed()
 
     def rebuild_model_combo(self):
         self.combo_model.clear()
@@ -340,6 +370,10 @@ class SettingsView(QWidget):
         self.combo_color_box.setCurrentText(self.rgb_to_color_name(box_color))
         self.combo_color_contour.setCurrentText(self.rgb_to_color_name(contour_color))
 
+        # Theme mode
+        theme_mode = config.get("theme_mode", "light")
+        self.combo_theme.setCurrentIndex(1 if theme_mode == "dark" else 0)
+
         # Reports directory
         reports_dir = config.get("default_reports_dir", self.view_model.get_reports_dir())
         self.lbl_reports_dir.setText(f"Reports Directory: {reports_dir}")
@@ -356,6 +390,7 @@ class SettingsView(QWidget):
             "overlay_color": self.color_to_rgb(self.combo_color_overlay.currentText()),
             "box_color": self.color_to_rgb(self.combo_color_box.currentText()),
             "contour_color": self.color_to_rgb(self.combo_color_contour.currentText()),
+            "theme_mode": "dark" if self.combo_theme.currentIndex() == 1 else "light",
             "default_reports_dir": self.lbl_reports_dir.toolTip()
         }
         self.view_model.save_settings(new_config)

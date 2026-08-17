@@ -51,6 +51,7 @@ class HistoryManager:
             "box_thickness": 2,
             "contour_color": [0, 0, 255],
             "contour_thickness": 2,
+            "theme_mode": "light",
             "default_reports_dir": self.reports_dir
         }
         

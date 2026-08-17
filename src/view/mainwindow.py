@@ -3,7 +3,7 @@ import importlib
 from PySide6.QtCore import Slot, QFileSystemWatcher
 from PySide6.QtGui import QIcon, QPixmap
 
-from qfluentwidgets import FluentWindow, NavigationItemPosition
+from qfluentwidgets import FluentWindow, NavigationItemPosition, setTheme, Theme, toggleTheme, isDarkTheme
 from qfluentwidgets import FluentIcon as FIF
 
 from src.model import HistoryManager
@@ -28,6 +28,13 @@ class MainWindow(FluentWindow):
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(QPixmap(icon_path)))
 
+        # Apply saved theme mode
+        saved_theme = self.hm.config.get("theme_mode", "light")
+        if saved_theme == "dark":
+            setTheme(Theme.DARK)
+        else:
+            setTheme(Theme.LIGHT)
+
         # 1. Setup Central Views and ViewModels
         self.setup_views()
 
@@ -36,6 +43,9 @@ class MainWindow(FluentWindow):
 
         # 3. Connect signals
         self.connect_signals()
+
+        # Notify initial theme styling to child views
+        self.notify_theme_changed()
 
         # Select Home Tab by default
         self.switchTo(self.page_home)
@@ -84,6 +94,15 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.page_batch, FIF.FOLDER, "Batch Processing")
         self.addSubInterface(self.page_history, FIF.HISTORY, "History")
         
+        # Add Theme Toggle action at bottom of navigation sidebar
+        self.navigationInterface.addItem(
+            routeKey="themeToggleAction",
+            icon=FIF.CONSTRACT,
+            text="Toggle Theme",
+            onClick=self.on_toggle_theme_clicked,
+            position=NavigationItemPosition.BOTTOM
+        )
+
         # Add User Manual and Settings at the bottom of the sidebar
         self.addSubInterface(
             self.page_doc,
@@ -97,6 +116,34 @@ class MainWindow(FluentWindow):
             "System Settings", 
             NavigationItemPosition.BOTTOM
         )
+
+    def on_toggle_theme_clicked(self):
+        toggleTheme()
+        new_mode = "dark" if isDarkTheme() else "light"
+        self.hm.save_config({"theme_mode": new_mode})
+        self.notify_theme_changed()
+
+    def notify_theme_changed(self):
+        if hasattr(self, "page_doc"):
+            self.page_doc.reload_manual()
+        if hasattr(self, "page_single"):
+            for viewer in [
+                getattr(self.page_single, "viewer_orig", None),
+                getattr(self.page_single, "viewer_overlay", None),
+                getattr(self.page_single, "viewer_mask", None),
+                getattr(self.page_single, "viewer_vis", None)
+            ]:
+                if viewer and hasattr(viewer, "update_theme_style"):
+                    viewer.update_theme_style()
+        if hasattr(self, "page_history"):
+            for viewer in [
+                getattr(self.page_history, "detail_viewer_vis", None),
+                getattr(self.page_history, "detail_viewer_orig", None),
+                getattr(self.page_history, "detail_viewer_overlay", None),
+                getattr(self.page_history, "detail_viewer_mask", None)
+            ]:
+                if viewer and hasattr(viewer, "update_theme_style"):
+                    viewer.update_theme_style()
 
     def connect_signals(self):
         # Navigation signals from Home quick actions

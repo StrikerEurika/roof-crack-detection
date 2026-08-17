@@ -76,36 +76,44 @@ class DocumentationView(QWidget):
 
     @Slot()
     def reload_manual(self):
+        from qfluentwidgets import isDarkTheme
+        is_dark = isDarkTheme()
+        text_color = "#e2e8f0" if is_dark else "#1f2937"
+        heading_color = "#f8fafc" if is_dark else "#0f172a"
+        code_bg = "#334155" if is_dark else "#f1f5f9"
+        code_color = "#f8fafc" if is_dark else "#0f172a"
+        hr_color = "#475569" if is_dark else "#e2e8f0"
+
         if os.path.exists(self.manual_path):
             with open(self.manual_path, "r", encoding="utf-8") as f:
                 md_text = f.read()
-            self.text_browser.document().setDefaultStyleSheet("""
-                body, p, li, td, span, div {
-                    color: #1f2937;
+            self.text_browser.document().setDefaultStyleSheet(f"""
+                body, p, li, td, span, div {{
+                    color: {text_color};
                     font-size: 14px;
                     line-height: 1.6;
-                }
-                h1, h2, h3, h4, h5, h6 {
-                    color: #0f172a;
+                }}
+                h1, h2, h3, h4, h5, h6 {{
+                    color: {heading_color};
                     font-weight: bold;
                     margin-top: 14px;
                     margin-bottom: 8px;
-                }
-                code, pre {
-                    background-color: #f1f5f9;
-                    color: #0f172a;
+                }}
+                code, pre {{
+                    background-color: {code_bg};
+                    color: {code_color};
                     font-family: 'Consolas', monospace;
-                }
-                hr {
-                    border: 1px solid #e2e8f0;
-                }
-                a {
-                    color: #0078d4;
-                }
+                }}
+                hr {{
+                    border: 1px solid {hr_color};
+                }}
+                a {{
+                    color: #3b82f6;
+                }}
             """)
             self.text_browser.setMarkdown(md_text)
         else:
             self.text_browser.setHtml(
                 "<h3 style='color: #e81123;'>User Manual File Not Found</h3>"
-                f"<p style='color: #1f2937;'>Expected documentation at: <code>{self.manual_path}</code></p>"
+                f"<p style='color: {text_color};'>Expected documentation at: <code>{self.manual_path}</code></p>"
             )

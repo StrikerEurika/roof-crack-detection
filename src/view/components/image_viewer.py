@@ -23,16 +23,13 @@ class ImageViewer(QGraphicsView):
         self.pixmap_item = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap_item)
 
-        # Configure background style
-        self.setStyleSheet("""
-            QGraphicsView {
-                border: 1px solid #cbd5e1;
-                background-color: #e2e8f0;
-                border-radius: 8px;
-            }
-        """)
-        self.setBackgroundBrush(QColor("#e2e8f0"))
-        self.scene.setBackgroundBrush(QColor("#e2e8f0"))
+        # Soft placeholder text label
+        self.placeholder_label = QLabel("No image loaded", self)
+        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.placeholder_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        # Configure background style according to current theme
+        self.update_theme_style()
 
         # Configure viewer behavior
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -43,14 +40,28 @@ class ImageViewer(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        # Soft placeholder text label
-        self.placeholder_label = QLabel("No image loaded", self)
-        self.placeholder_label.setStyleSheet("color: #64748b; font-size: 14px; font-weight: 500; background: transparent;")
-        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.placeholder_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-
         # Set drag & drop
         self.setAcceptDrops(True)
+
+    def update_theme_style(self) -> None:
+        """Adapts canvas background and border colors dynamically for light/dark themes."""
+        from qfluentwidgets import isDarkTheme
+        is_dark = isDarkTheme()
+        bg_color = "#1e293b" if is_dark else "#e2e8f0"
+        border_color = "#334155" if is_dark else "#cbd5e1"
+        text_color = "#94a3b8" if is_dark else "#64748b"
+
+        self.setStyleSheet(f"""
+            QGraphicsView {{
+                border: 1px solid {border_color};
+                background-color: {bg_color};
+                border-radius: 8px;
+            }}
+        """)
+        self.setBackgroundBrush(QColor(bg_color))
+        self.scene.setBackgroundBrush(QColor(bg_color))
+        if hasattr(self, "placeholder_label"):
+            self.placeholder_label.setStyleSheet(f"color: {text_color}; font-size: 14px; font-weight: 500; background: transparent;")
 
         # Zoom parameters
         self.zoom_factor = self.ZOOM_FACTOR
